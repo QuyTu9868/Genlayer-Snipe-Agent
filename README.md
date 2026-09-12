@@ -85,6 +85,7 @@ while building this (and how it was fixed) - useful if you hit the same wall.
 ```bash
 cd frontend
 npm install
+echo "VITE_DEPLOYER_PRIVATE_KEY=0x..." > .env  # a dedicated demo wallet, see frontend/README.md
 npm run dev
 ```
 
@@ -95,8 +96,10 @@ for example:
 http://localhost:5173/?token=0x1c85e5fb478e91d8b769a509278f10e5e432754a
 ```
 
-See [`frontend/README.md`](frontend/README.md) for how the wallet flow and the
-contract calls are wired.
+No wallet needed to view a case. Opening a new case signs its transactions
+with a dedicated demo wallet the app carries for this purpose - see
+[`frontend/README.md`](frontend/README.md) for why, and for the tradeoffs of
+that choice before reusing this pattern anywhere real funds are involved.
 
 ## Data sources
 

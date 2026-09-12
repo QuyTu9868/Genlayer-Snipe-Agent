@@ -149,3 +149,21 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
 - **Triệu chứng:** tx roi vao `UNDETERMINED`, khong ghi state.
 - **Nguyên nhân gốc:** cac model that su doc khac nhau ve 1 doan code mo ho (khong phai loi code contract).
 - **Cách sửa:** khong phai bug. Frontend/logic goi lai nen cho phep retry, dung tinh la loi.
+
+### 14. Chup man hinh tu dong (pixelshot/CDP) bao SAI la trang bi treo
+- **Triệu chứng:** sau khi doi kien truc frontend sang dung 1 vi demo rieng
+  (xem quyet dinh o `frontend/README.md`), test lai bang chup man hinh tu
+  dong lien tuc 6 lan lien, lan nao cung dung o "Checking the record..." -
+  nghi la bug that (khac han hanh vi da thay o CP6, luc do cuoi cung van
+  resolve duoc).
+- **Nguyên nhân gốc:** KHONG phai bug. Dung Playwright viet script rieng, cho
+  du 20 giay that su roi moi chup, thi trang chi mat ~2.6 giay de doc xong va
+  hien dung ket qua. Cong cu chup man hinh nhanh (`pixelshot --wait-network-idle`,
+  cap ~2-12s tuy lan) bat man hinh dung LUC promise chua kip resolve, roi bao
+  cao sai la "treo". Day la gioi han cua chinh cong cu do (khong tin cay cho
+  cac lan doc RPC co do tre bien thien), khong phai dac diem cua app.
+- **Bai hoc:** gap ket qua "treo" tu chup man hinh tu dong nhieu lan lien
+  tiep NHUNG code logic khong co gi bat thuong (khong loi ném ra, khong async
+  chain thieu catch) - nen nghi ngo cong cu do truoc, xac minh lai bang cach
+  doc that lau (20s+) qua Playwright/console log truc tiep, TRUOC KHI ket
+  luan la bug that va di sua code.

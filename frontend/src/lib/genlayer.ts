@@ -1,89 +1,32 @@
-import { createClient } from "genlayer-js";
+import { createAccount, createClient } from "genlayer-js";
 import { testnetAsimov } from "genlayer-js/chains";
 import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar that da deploy o CP5, tren GenLayer Asimov Testnet
 export const CONTRACT_ADDRESS = "0x8835d2E5a58AD6A73501CA18860Ab89cC3c85308" as const;
 
-interface EthereumProvider {
-  isMetaMask?: boolean;
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-  on: (event: string, handler: (...args: unknown[]) => void) => void;
-  removeListener: (event: string, handler: (...args: unknown[]) => void) => void;
-}
+// DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
+// App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
+// khong chua tai san that (chi la GEN testnet, xin tu faucet). Vi vay day la
+// muc rui ro chap nhan duoc cho ban nop hackathon - KHONG lam vay voi bat ky
+// vi nao co tai san that, vi key nay se lo cho bat ky ai xem duoc source cua
+// trang web (nguoi dung khong ky gi ca, khong can vi rieng).
+const DEMO_PRIVATE_KEY = import.meta.env.VITE_DEPLOYER_PRIVATE_KEY as string | undefined;
 
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
+// getDemoAccount: tao signer tu private key demo, ky giao dich thay cho nguoi xem
+function getDemoAccount() {
+  if (!DEMO_PRIVATE_KEY) {
+    throw new Error(
+      "Demo wallet is not configured. Set VITE_DEPLOYER_PRIVATE_KEY in frontend/.env.",
+    );
   }
+  return createAccount(DEMO_PRIVATE_KEY as `0x${string}`);
 }
 
-export function isWalletInstalled(): boolean {
-  if (typeof window === "undefined") return false;
-  return !!window.ethereum;
-}
-
-export function getProvider(): EthereumProvider | null {
-  if (typeof window === "undefined") return null;
-  return window.ethereum ?? null;
-}
-
-// connectWallet: xin quyen truy cap tai khoan va dam bao dang o dung mang GenLayer Asimov Testnet
-export async function connectWallet(): Promise<string> {
-  const provider = getProvider();
-  if (!provider) {
-    throw new Error("No wallet found. Install MetaMask to continue.");
-  }
-
-  const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
-  if (!accounts?.length) {
-    throw new Error("No account selected.");
-  }
-
-  const targetChainIdHex = `0x${testnetAsimov.id.toString(16)}`;
-  const currentChainId = await provider.request({ method: "eth_chainId" });
-
-  if (currentChainId !== targetChainIdHex) {
-    try {
-      await provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: targetChainIdHex }],
-      });
-    } catch (switchError: unknown) {
-      const code = (switchError as { code?: number })?.code;
-      if (code === 4902) {
-        await provider.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: targetChainIdHex,
-              chainName: testnetAsimov.name,
-              nativeCurrency: testnetAsimov.nativeCurrency,
-              rpcUrls: testnetAsimov.rpcUrls.default.http,
-              blockExplorerUrls: [testnetAsimov.blockExplorers?.default.url],
-            },
-          ],
-        });
-      } else {
-        throw new Error("Please switch to GenLayer Asimov Testnet in your wallet.");
-      }
-    }
-  }
-
-  return accounts[0];
-}
-
-export async function getConnectedAccount(): Promise<string | null> {
-  const provider = getProvider();
-  if (!provider) return null;
-  const accounts = (await provider.request({ method: "eth_accounts" })) as string[];
-  return accounts?.[0] ?? null;
-}
-
-// getClient: client doc (khong can vi) hoac client ky duoc (can dia chi vi dang ket noi)
-export function getClient(account?: string) {
+// getClient: client doc (khong can vi) hoac client ky duoc voi vi demo cua app
+export function getClient(withSigner = false) {
   const config: Record<string, unknown> = { chain: testnetAsimov };
-  if (account) config.account = account;
+  if (withSigner) config.account = getDemoAccount();
   return createClient(config);
 }
 
@@ -234,9 +177,9 @@ export async function getObservations(tokenAddress: string): Promise<Observation
   }
 }
 
-// runWrite: goi 1 method ghi (scan_token/observe_token/compute_verdict) va cho consensus xac nhan
-async function runWrite(account: string, functionName: string, tokenAddress: string): Promise<void> {
-  const client = getClient(account);
+// runWrite: goi 1 method ghi (scan_token/observe_token/compute_verdict) bang vi demo cua app, cho consensus xac nhan
+async function runWrite(functionName: string, tokenAddress: string): Promise<void> {
+  const client = getClient(true);
   const txHash = await client.writeContract({
     address: CONTRACT_ADDRESS,
     functionName,
@@ -253,20 +196,19 @@ async function runWrite(account: string, functionName: string, tokenAddress: str
 
 export type ScanStep = "scan_token" | "observe_token" | "compute_verdict";
 
-// runFullScan: chay tuan tu 3 buoc, goi onStep truoc moi buoc de UI hien tien do
+// runFullScan: chay tuan tu 3 buoc bang vi demo cua app, goi onStep truoc moi buoc de UI hien tien do
 export async function runFullScan(
-  account: string,
   tokenAddress: string,
   onStep: (step: ScanStep) => void,
 ): Promise<Verdict> {
   onStep("scan_token");
-  await runWrite(account, "scan_token", tokenAddress);
+  await runWrite("scan_token", tokenAddress);
 
   onStep("observe_token");
-  await runWrite(account, "observe_token", tokenAddress);
+  await runWrite("observe_token", tokenAddress);
 
   onStep("compute_verdict");
-  await runWrite(account, "compute_verdict", tokenAddress);
+  await runWrite("compute_verdict", tokenAddress);
 
   const verdict = await getVerdict(tokenAddress);
   if (!verdict) {

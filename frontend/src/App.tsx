@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   CONTRACT_ADDRESS,
-  connectWallet,
-  getConnectedAccount,
   getFacts,
   getObservations,
   getVerdict,
   isValidAddress,
-  isWalletInstalled,
   runFullScan,
   type Facts,
   type Observations,
@@ -37,12 +34,6 @@ function explorerUrl(address: string): string {
 export default function App() {
   const [input, setInput] = useState("");
   const [view, setView] = useState<ViewState>({ kind: "idle" });
-  const [account, setAccount] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
-
-  useEffect(() => {
-    getConnectedAccount().then(setAccount).catch(() => setAccount(null));
-  }, []);
 
   // pre-fill from a shareable case link, e.g. rugradar.app?token=0x...
   useEffect(() => {
@@ -82,30 +73,10 @@ export default function App() {
     handleCheck(trimmed);
   }
 
-  async function handleConnect(): Promise<string | null> {
-    setConnecting(true);
-    try {
-      const addr = await connectWallet();
-      setAccount(addr);
-      return addr;
-    } catch (err) {
-      setView({ kind: "error", message: err instanceof Error ? err.message : "Could not connect wallet." });
-      return null;
-    } finally {
-      setConnecting(false);
-    }
-  }
-
   async function handleScan(tokenAddress: string) {
-    let activeAccount = account;
-    if (!activeAccount) {
-      activeAccount = await handleConnect();
-      if (!activeAccount) return;
-    }
-
     setView({ kind: "scanning", tokenAddress, step: "scan_token" });
     try {
-      const verdict = await runFullScan(activeAccount, tokenAddress, (step) => {
+      const verdict = await runFullScan(tokenAddress, (step) => {
         setView({ kind: "scanning", tokenAddress, step });
       });
       const [facts, observations] = await Promise.all([
@@ -164,21 +135,15 @@ export default function App() {
             <div className="rounded-xl border border-border-soft bg-surface p-8">
               <p className="text-sm text-ink">No case on file yet for this token.</p>
               <p className="mt-2 text-sm text-ink-muted">
-                Open a case: this submits three signed transactions (evidence gathering, AI
-                testimony, verdict) to the GenLayer Asimov Testnet. Requires a wallet with GEN.
+                Opening a case submits three transactions to the GenLayer Asimov Testnet
+                (evidence gathering, AI testimony, verdict). No wallet needed to view a case.
               </p>
               <button
                 onClick={() => handleScan(view.tokenAddress)}
-                disabled={connecting}
-                className="mt-5 rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#333333] active:scale-[0.98] disabled:opacity-50"
+                className="mt-5 rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#333333] active:scale-[0.98]"
               >
-                {account ? "Open a case" : connecting ? "Connecting..." : "Connect wallet and open a case"}
+                Open a case
               </button>
-              {!isWalletInstalled() && (
-                <p className="mt-3 text-xs text-ink-muted">
-                  No wallet detected. Install a browser wallet such as MetaMask to open a case.
-                </p>
-              )}
             </div>
           )}
 

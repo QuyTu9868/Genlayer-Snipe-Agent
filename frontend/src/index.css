@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Newsreader", "Georgia", serif;
+  --font-sans: "Source Sans 3", "Helvetica Neue", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  --color-canvas: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-border-soft: #e8e6e0;
+  --color-ink: #1c1b19;
+  --color-ink-muted: #78766f;
+
+  --color-safe-bg: #edf3ec;
+  --color-safe-text: #346538;
+  --color-suspicious-bg: #fbf3db;
+  --color-suspicious-text: #956400;
+  --color-scam-bg: #fdebec;
+  --color-scam-text: #9f2f2d;
+  --color-unresolved-bg: #f1f0ec;
+  --color-unresolved-text: #5c5a54;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}

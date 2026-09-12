@@ -1,0 +1,17 @@
+networks:
+  default: studionet
+
+  localnet:
+    url: "http://127.0.0.1:4001/api"
+
+  studionet: {}
+
+  testnet_asimov:
+    accounts:
+      - "${DEPLOYER_PRIVATE_KEY}"
+    from: "${DEPLOYER_PRIVATE_KEY}"
+
+paths:
+  contracts: "contracts"
+
+environment: .env

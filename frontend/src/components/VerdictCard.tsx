@@ -1,11 +1,34 @@
 import type { Facts, Observations, Verdict } from "../lib/genlayer";
-import { translateFlag } from "../lib/flags";
 import { VerdictBadge } from "./VerdictBadge";
 
 function formatUsd(value: string): string {
   const num = Number(value);
   if (Number.isNaN(num)) return value;
   return num.toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
+// formatCompactUsd: rut gon kieu 52.04K / 1.2M cho dong tom tat tren dau the
+function formatCompactUsd(value: string): string {
+  const num = Number(value);
+  if (Number.isNaN(num)) return value;
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(2)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(2)}K`;
+  return num.toFixed(0);
+}
+
+// formatAge: doi so gio thanh chuoi ngan (45m / 6h / 3d)
+function formatAge(hours: number): string {
+  if (hours < 1) return "<1h";
+  if (hours < 48) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+// formatPrice: gia token thuong rat nho, can nhieu chu so co nghia
+function formatPrice(value: string): string {
+  const num = Number(value);
+  if (Number.isNaN(num) || num === 0) return "-";
+  if (num >= 1) return `$${num.toFixed(4)}`;
+  return `$${num.toPrecision(4)}`;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
@@ -30,24 +53,44 @@ export function VerdictCard({
 }) {
   const flagList = verdict.flags
     .split(";")
-    .map((f) => translateFlag(f.trim()))
+    .map((f) => f.trim())
     .filter(Boolean);
+
+  const tokenLabel = facts?.token_name
+    ? `${facts.token_name}${facts.token_symbol ? ` (${facts.token_symbol})` : ""}`
+    : "";
 
   return (
     <div className="rounded-xl border border-border-soft bg-surface p-8 sm:p-10">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-soft pb-6">
         <div>
           <p className="text-xs uppercase tracking-widest text-ink-muted">Case file</p>
-          <p className="mt-1 break-all font-mono text-sm text-ink">{tokenAddress}</p>
+          {tokenLabel && <p className="mt-1 font-serif text-xl text-ink">{tokenLabel}</p>}
+          <p className="mt-1 break-all font-mono text-sm text-ink-muted">{tokenAddress}</p>
         </div>
         <VerdictBadge verdict={verdict.verdict} />
       </div>
 
       {verdict.resolved ? (
         <>
-          <div className="flex items-baseline gap-3 py-8">
-            <span className="font-serif text-6xl tracking-tight text-ink">{verdict.risk_score}</span>
-            <span className="text-sm text-ink-muted">/ 100 risk score</span>
+          <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3 py-8">
+            <div className="flex items-baseline gap-3">
+              <span className="font-serif text-6xl tracking-tight text-ink">{verdict.risk_score}</span>
+              <span className="text-sm text-ink-muted">/ 100 risk score</span>
+            </div>
+            {facts && facts.has_pool && (
+              <div className="flex gap-6 text-sm">
+                <span className="text-ink-muted">
+                  MC <span className="font-mono text-ink">${formatCompactUsd(facts.market_cap_usd)}</span>
+                </span>
+                <span className="text-ink-muted">
+                  Liq <span className="font-mono text-ink">${formatCompactUsd(facts.reserve_in_usd)}</span>
+                </span>
+                <span className="text-ink-muted">
+                  Age <span className="font-mono text-ink">{formatAge(facts.pool_age_hours)}</span>
+                </span>
+              </div>
+            )}
           </div>
 
           <div>
@@ -73,6 +116,7 @@ export function VerdictCard({
                 <Fact label="Source verified" value={facts.is_verified ? "Yes" : "No"} />
                 <Fact label="Holders" value={facts.holders_count.toLocaleString("en-US")} />
                 <Fact label="Top individual holder" value={`${facts.top_holder_percent}%`} />
+                <Fact label="Top 10 individual holders" value={`${facts.top10_percent}%`} />
                 <Fact label="Independent large holders" value={String(facts.whale_holder_count)} />
                 <Fact
                   label="Liquidity pool"
@@ -80,9 +124,11 @@ export function VerdictCard({
                 />
                 {facts.has_pool && (
                   <>
+                    <Fact label="Price" value={formatPrice(facts.price_usd)} />
+                    <Fact label="Market cap" value={`$${formatUsd(facts.market_cap_usd)}`} />
                     <Fact label="24h volume" value={`$${formatUsd(facts.volume_24h_usd)}`} />
                     <Fact label="24h buys / sells" value={`${facts.buys_24h} / ${facts.sells_24h}`} />
-                    <Fact label="Pool age" value={`${facts.pool_age_hours}h`} />
+                    <Fact label="Pool age" value={formatAge(facts.pool_age_hours)} />
                   </>
                 )}
               </div>

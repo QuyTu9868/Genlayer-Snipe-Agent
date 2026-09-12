@@ -167,3 +167,34 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   chain thieu catch) - nen nghi ngo cong cu do truoc, xac minh lai bang cach
   doc that lau (20s+) qua Playwright/console log truc tiep, TRUOC KHI ket
   luan la bug that va di sua code.
+
+### 15. `wasm_trap DeterministicMode` khi scan token HOP (khong bat duoc bang try/except)
+- **Triệu chứng:** token HOP luon bao `wasm_trap DeterministicMode` o `scan_token`,
+  trong khi POPE chay binh thuong. `try/except` Python bao quanh moi fetch khong
+  bat duoc gi ca, vi day la loi cap VM chu khong phai exception Python.
+- **Nguyên nhân gốc:** `scan_token` goi 4 endpoint trong CUNG 1 giao dich, tong
+  ~626 KB. Rieng `/smart-contracts/{addr}` cua HOP nang 575 KB (kem ca source
+  code lan bytecode). GenVM vuot gioi han bo nho roi trap.
+- **Cách sửa:** thay `/tokens/{addr}` + `/smart-contracts/{addr}` bang MOT
+  endpoint `/addresses/{addr}` (~1 KB, nho hon 540 lan) - no tra ve ca
+  `is_verified` lan khoi `token` long ben trong, du cho toan bo Facts.
+  `/smart-contracts/` van dung nhung chi o `observe_token`, la giao dich rieng.
+
+### 16. Contract khong deploy duoc len testnet Asimov khi source vuot ~24 KB
+- **Triệu chứng:** sau khi them field va comment, moi lan deploy deu treo o
+  `NOT_VOTED` roi timeout. Kiem tra tren chain: `status: 0`, `activator: 0x0`,
+  `createdTimestamp: 0` - tuc la tx chua bao gio len chain.
+- **Nguyên nhân gốc:** kich thuoc source. Ban deploy duoc o CP5 nang 24.390
+  byte; ban moi 27.411 byte thi tach; contract phu FetchDebug (2.458 byte)
+  deploy binh thuong cung ngay -> khong phai loi vi hay mang.
+- **Cách sửa:** rut gon comment (giu lai cac comment giai thich "tai sao",
+  bo cac comment mo ta "cai gi" lap lai ten bien) xuong 19.561 byte. Deploy
+  thanh cong ngay lan dau, tx ket thuc `FINISHED_WITH_RETURN` trong ~25 giay.
+
+### 17. Dia chi contract moi deploy nam o `recipient`, khong phai `data.contract_address`
+- **Triệu chứng:** script deploy tu viet doc `tx.data.contract_address` nen luon
+  thay `undefined`, tuong la deploy that bai du tx da `FINISHED_WITH_RETURN`.
+- **Nguyên nhân gốc:** voi giao dich deploy, GenLayer dat dia chi contract moi
+  vao truong `recipient` cua transaction.
+- **Cách sửa:** doc `recipient`. Hau qua cua nham lan nay: script thu lai 12 lan
+  nen da deploy 12 ban contract giong het nhau, chi dung ban cuoi.

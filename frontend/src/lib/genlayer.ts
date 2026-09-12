@@ -3,7 +3,7 @@ import { testnetAsimov } from "genlayer-js/chains";
 import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar that da deploy o CP5, tren GenLayer Asimov Testnet
-export const CONTRACT_ADDRESS = "0x8835d2E5a58AD6A73501CA18860Ab89cC3c85308" as const;
+export const CONTRACT_ADDRESS = "0x9A3DDb5B496e23e79D6Ffa1F3Bb6F53777E4a344" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
@@ -32,11 +32,16 @@ export function getClient(withSigner = false) {
 
 export type Facts = {
   resolved: boolean;
+  token_name: string;
+  token_symbol: string;
   holders_count: number;
   top_holder_percent: number;
+  top10_percent: number;
   whale_holder_count: number;
   is_verified: boolean;
   has_pool: boolean;
+  price_usd: string;
+  market_cap_usd: string;
   reserve_in_usd: string;
   volume_24h_usd: string;
   buys_24h: number;
@@ -89,11 +94,16 @@ function toNumber(value: unknown): number {
 function normalizeFacts(raw: Record<string, unknown>): Facts {
   return {
     resolved: Boolean(raw.resolved),
+    token_name: String(raw.token_name ?? ""),
+    token_symbol: String(raw.token_symbol ?? ""),
     holders_count: toNumber(raw.holders_count),
     top_holder_percent: toNumber(raw.top_holder_percent),
+    top10_percent: toNumber(raw.top10_percent),
     whale_holder_count: toNumber(raw.whale_holder_count),
     is_verified: Boolean(raw.is_verified),
     has_pool: Boolean(raw.has_pool),
+    price_usd: String(raw.price_usd ?? "0"),
+    market_cap_usd: String(raw.market_cap_usd ?? "0"),
     reserve_in_usd: String(raw.reserve_in_usd ?? "0"),
     volume_24h_usd: String(raw.volume_24h_usd ?? "0"),
     buys_24h: toNumber(raw.buys_24h),

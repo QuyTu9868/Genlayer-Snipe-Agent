@@ -1,25 +1,22 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-import json  # parse JSON tra ve tu Blockscout/GeckoTerminal
-from datetime import datetime  # tinh tuoi pool tu pool_created_at
-from dataclasses import dataclass  # dinh nghia kieu du lieu luu on-chain
-from genlayer import *  # nap SDK GenLayer (gl.Contract, gl.public, gl.nondet, gl.eq_principle, gl.vm...)
+import json
+from datetime import datetime
+from dataclasses import dataclass
+from genlayer import *
 
-# BLOCKSCOUT_BASE, GECKOTERMINAL_BASE: hang so tu dat, endpoint 2 nguon du lieu da verify song
 BLOCKSCOUT_BASE = "https://robinhoodchain.blockscout.com/api/v2"
 GECKOTERMINAL_BASE = "https://api.geckoterminal.com/api/v2/networks/robinhood"
 
-MAX_SOURCE_CHARS = 8000  # MAX_SOURCE_CHARS: gioi han do dai source code dua vao prompt, tranh prompt qua to
+MAX_SOURCE_CHARS = 8000  # gioi han source code dua vao prompt
 
 
-def _normalize_address(token_address) -> str:  # _normalize_address: ham tu dat, chuan hoa token_address ve chuoi hex thuong
-    # mot so client (vd genlayer CLI) tu suy luan chuoi hex 40 ky tu thanh kieu
-    # Address thay vi str, du contract khai bao tham so la str. Address co
-    # thuoc tinh as_hex (checksummed) chu khong co .lower() nhu str thuong.
+def _normalize_address(token_address) -> str:
+    # Mot so client (vd genlayer CLI) tu suy luan chuoi hex 40 ky tu thanh kieu
+    # Address thay vi str. Address co .as_hex chu khong co .lower().
     if hasattr(token_address, "as_hex"):
         return token_address.as_hex.lower()
     return str(token_address).lower()
 
-# OBSERVATION_PROMPT: cau hoi dong cho AI, CHI tra ve true/false cho tung dau hieu, khong tu tinh diem
 OBSERVATION_PROMPT = """You are auditing the Solidity source code of an ERC-20 token contract.
 Read the source code below and answer what the code ACTUALLY does, not what
 comments or names claim it does.
@@ -39,96 +36,84 @@ Respond only in this exact JSON format, nothing else, no markdown, no explanatio
 """
 
 
-@allow_storage  # cho phep luu kieu du lieu tu dat nay vao state on-chain
+@allow_storage
 @dataclass
-class Facts:  # Facts: tap hop cac quan sat KHACH QUAN (khong qua AI) ve 1 token
-    resolved: bool  # resolved: co doc duoc du lieu loi tu ca 2 nguon hay khong (fail-closed)
-    holders_count: u256  # holders_count: tong so vi dang giu token
-    top_holder_percent: u256  # top_holder_percent: % supply cua vi CA NHAN (khong tinh contract/pool) giu nhieu nhat
-    whale_holder_count: u256  # whale_holder_count: so vi ca nhan doc lap giu >=1% supply
-    is_verified: bool  # is_verified: source code token co duoc verify tren Blockscout khong
-    has_pool: bool  # has_pool: token co pool thanh khoan tren GeckoTerminal khong
-    reserve_in_usd: str  # reserve_in_usd: do sau thanh khoan pool dau tien (USD, dang string tranh sai so float)
-    volume_24h_usd: str  # volume_24h_usd: volume giao dich 24h (USD, dang string)
-    buys_24h: u256  # buys_24h: so lenh mua trong 24h
-    sells_24h: u256  # sells_24h: so lenh ban trong 24h
-    pool_age_hours: u256  # pool_age_hours: tuoi pool tinh theo gio, tu luc tao den luc scan
+class Facts:
+    # Quan sat KHACH QUAN (khong qua AI). resolved=False nghia la fail-closed.
+    resolved: bool
+    token_name: str
+    token_symbol: str
+    holders_count: u256
+    top_holder_percent: u256  # % supply cua vi CA NHAN lon nhat (loai contract/pool)
+    top10_percent: u256
+    whale_holder_count: u256  # so vi ca nhan doc lap giu >=1% supply
+    is_verified: bool
+    has_pool: bool
+    price_usd: str  # cac gia tri USD giu dang string de tranh sai so float
+    market_cap_usd: str
+    reserve_in_usd: str
+    volume_24h_usd: str
+    buys_24h: u256
+    sells_24h: u256
+    pool_age_hours: u256
 
 
-@allow_storage  # cho phep luu kieu du lieu tu dat nay vao state on-chain
+@allow_storage
 @dataclass
-class Observations:  # Observations: quan sat DONG cua AI ve source code, CHI true/false, AI khong tinh diem
-    observed: bool  # observed: AI co thuc su phan tich duoc source code hay khong (fail-closed)
-    has_mint: bool  # has_mint: owner/role dac quyen co the mint them token
-    owner_can_pause: bool  # owner_can_pause: owner/role dac quyen co the tam dung giao dich
-    sell_blocked: bool  # sell_blocked: co logic chan/gioi han chieu ban
-    high_fee: bool  # high_fee: phi giao dich cao bat thuong hoac owner chinh tuy y
-    is_proxy: bool  # is_proxy: contract proxy, code thuc thi co the bi trao doi sau nay
+class Observations:
+    # Quan sat DONG cua AI ve source code, CHI true/false, AI khong tinh diem.
+    observed: bool
+    has_mint: bool
+    owner_can_pause: bool
+    sell_blocked: bool
+    high_fee: bool
+    is_proxy: bool
 
 
-@allow_storage  # cho phep luu kieu du lieu tu dat nay vao state on-chain
+@allow_storage
 @dataclass
-class Verdict:  # Verdict: ket qua CHAM DIEM cuoi cung, hoan toan do CODE tinh, khong qua AI
-    resolved: bool  # resolved: co du du lieu de cham diem hay UNRESOLVED (fail-closed)
-    risk_score: u256  # risk_score: diem rui ro 0-100, cang cao cang nguy hiem
-    verdict: str  # verdict: "SAFE" | "SUSPICIOUS" | "SCAM" | "UNRESOLVED"
-    flags: str  # flags: cac ly do da bat, noi nhau boi "; ", moi ly do 1 cau ngan
-    observed_at: str  # observed_at: thoi diem cham diem (gl.message_raw["datetime"], deterministic)
+class Verdict:
+    # Ket qua cham diem cuoi cung, hoan toan do CODE tinh.
+    resolved: bool
+    risk_score: u256
+    verdict: str  # "SAFE" | "SUSPICIOUS" | "SCAM" | "UNRESOLVED"
+    flags: str
+    observed_at: str
 
 
-class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contract
-    facts: TreeMap[str, Facts]  # facts: state tu dat, luu Facts theo dia chi token (chu thuong)
-    observations: TreeMap[str, Observations]  # observations: state tu dat, luu quan sat AI theo dia chi token
-    verdicts: TreeMap[str, Verdict]  # verdicts: state tu dat, luu ket qua cham diem theo dia chi token
+class RugRadar(gl.Contract):
+    facts: TreeMap[str, Facts]
+    observations: TreeMap[str, Observations]
+    verdicts: TreeMap[str, Verdict]
 
-    def __init__(self):  # constructor, chay 1 lan luc deploy
-        pass  # TreeMap tu khoi tao rong, khong can gan gi them
+    def __init__(self):
+        pass
 
-    def _fetch_token_info(self, token_address: str) -> dict:  # _fetch_token_info: ham tu dat, lay holders_count + total_supply
-        url = f"{BLOCKSCOUT_BASE}/tokens/{token_address}"  # url: endpoint chi tiet 1 token tren Blockscout
+    def _fetch_address_info(self, token_address: str) -> dict:
+        # Dung endpoint /addresses/{addr} (~1 KB) thay vi goi rieng /tokens/{addr}
+        # VA /smart-contracts/{addr}. Cai smart-contracts co the nang toi 575 KB;
+        # gop nhieu fetch nang trong 1 giao dich lam GenVM vuot gioi han bo nho
+        # va bao wasm_trap (loi cap VM, try/except Python KHONG bat duoc).
+        # Xem error-log.md muc 15.
+        url = f"{BLOCKSCOUT_BASE}/addresses/{token_address}"
 
-        def fetch() -> str:  # fetch: closure non-deterministic, moi validator tu chay doc lap
-            try:  # bat loi mang/parse de tra ve JSON on dinh thay vi crash
-                web_data = gl.nondet.web.render(url, mode="text")  # goi web, lay body dang text (JSON)
-                data = json.loads(web_data)  # parse JSON
-                if not isinstance(data, dict) or data.get("holders_count") is None:  # dia chi khong ton tai -> Blockscout tra {"message":"Not found"}, KHONG co field nay
-                    return json.dumps({"ok": False, "error": "token not found"}, sort_keys=True)
-                return json.dumps(  # tra ve JSON da chuan hoa, sort_keys de moi validator ra chuoi y het nhau
+        def fetch() -> str:
+            try:
+                web_data = gl.nondet.web.render(url, mode="text")
+                data = json.loads(web_data)
+                token = data.get("token") if isinstance(data, dict) else None
+                if not isinstance(token, dict) or token.get("holders_count") is None:
+                    return json.dumps({"ok": False, "error": "not an indexed token"}, sort_keys=True)
+                return json.dumps(  # sort_keys de moi validator ra chuoi y het nhau
                     {
                         "ok": True,
-                        "holders_count": data.get("holders_count"),
-                        "total_supply": data.get("total_supply"),
+                        "holders_count": token.get("holders_count"),
+                        "total_supply": token.get("total_supply"),
+                        "decimals": token.get("decimals"),
+                        "name": token.get("name") or "",
+                        "symbol": token.get("symbol") or "",
+                        "is_verified": bool(data.get("is_verified", False)),
                     },
-                    sort_keys=True,
-                )
-            except Exception as e:  # loi mang, timeout, JSON hong...
-                return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)  # danh dau that bai, fail-closed o tang goi
-
-        return json.loads(gl.eq_principle.strict_eq(fetch))  # dong thuan strict: tat ca validator phai ra dung 1 ket qua
-
-    def _fetch_holders(self, token_address: str, total_supply_raw: int) -> dict:  # _fetch_holders: ham tu dat, tinh top holder % va whale count
-        url = f"{BLOCKSCOUT_BASE}/tokens/{token_address}/holders"  # url: danh sach holder tren Blockscout
-
-        def fetch() -> str:  # fetch: closure non-deterministic
-            try:
-                web_data = gl.nondet.web.render(url, mode="text")  # goi web
-                data = json.loads(web_data)  # parse JSON
-                items = data.get("items", [])  # danh sach holder
-                eoa_values = [  # eoa_values: bien tu dat, so du cua CAC VI CA NHAN (bo contract/pool AMM ra)
-                    int(item["value"])
-                    for item in items
-                    if not item.get("address", {}).get("is_contract", False)
-                ]
-                eoa_values.sort(reverse=True)  # sap xep giam dan, vi lon nhat len dau
-                top_percent = 0  # mac dinh 0 neu khong co vi ca nhan nao
-                whale_count = 0  # mac dinh 0
-                if total_supply_raw > 0 and eoa_values:  # chi tinh khi co du lieu hop le
-                    top_percent = eoa_values[0] * 100 // total_supply_raw  # % supply vi lon nhat, chia nguyen tranh float
-                    whale_count = sum(  # dem so vi ca nhan doc lap giu >=1% supply
-                        1 for v in eoa_values if v * 100 >= total_supply_raw
-                    )
-                return json.dumps(
-                    {"ok": True, "top_holder_percent": top_percent, "whale_holder_count": whale_count},
                     sort_keys=True,
                 )
             except Exception as e:
@@ -136,36 +121,58 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
-    def _fetch_verification(self, token_address: str) -> dict:  # _fetch_verification: ham tu dat, lay is_verified
-        url = f"{BLOCKSCOUT_BASE}/smart-contracts/{token_address}"  # url: endpoint smart-contract tren Blockscout
+    def _fetch_holders(self, token_address: str, total_supply_raw: int) -> dict:
+        url = f"{BLOCKSCOUT_BASE}/tokens/{token_address}/holders"
 
-        def fetch() -> str:  # fetch: closure non-deterministic
+        def fetch() -> str:
             try:
-                web_data = gl.nondet.web.render(url, mode="text")  # goi web (tra 422 neu chua verify, van co body)
-                data = json.loads(web_data)  # parse JSON
-                is_verified = bool(data.get("is_verified", False)) if isinstance(data, dict) else False  # is_verified: co truong nay khi verify, khong thi mac dinh False
-                return json.dumps({"ok": True, "is_verified": is_verified}, sort_keys=True)
-            except Exception:
-                return json.dumps({"ok": True, "is_verified": False}, sort_keys=True)  # loi/khong verify -> coi nhu chua verify, khong phai fail-closed toan bo
+                web_data = gl.nondet.web.render(url, mode="text")
+                data = json.loads(web_data)
+                items = data.get("items", [])
+                eoa_values = [  # chi vi CA NHAN, bo contract/pool AMM ra
+                    int(item["value"])
+                    for item in items
+                    if not item.get("address", {}).get("is_contract", False)
+                ]
+                eoa_values.sort(reverse=True)
+                top_percent = 0
+                top10_percent = 0
+                whale_count = 0
+                if total_supply_raw > 0 and eoa_values:  # chia nguyen, tranh float
+                    top_percent = eoa_values[0] * 100 // total_supply_raw
+                    top10_percent = sum(eoa_values[:10]) * 100 // total_supply_raw
+                    whale_count = sum(1 for v in eoa_values if v * 100 >= total_supply_raw)
+                return json.dumps(
+                    {
+                        "ok": True,
+                        "top_holder_percent": top_percent,
+                        "top10_percent": top10_percent,
+                        "whale_holder_count": whale_count,
+                    },
+                    sort_keys=True,
+                )
+            except Exception as e:
+                return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
-    def _fetch_pool(self, token_address: str) -> dict:  # _fetch_pool: ham tu dat, lay thanh khoan + volume + mua/ban
-        url = f"{GECKOTERMINAL_BASE}/tokens/{token_address}/pools"  # url: danh sach pool tren GeckoTerminal
+    def _fetch_pool(self, token_address: str) -> dict:
+        url = f"{GECKOTERMINAL_BASE}/tokens/{token_address}/pools"
 
-        def fetch() -> str:  # fetch: closure non-deterministic
+        def fetch() -> str:
             try:
-                web_data = gl.nondet.web.render(url, mode="text")  # goi web
-                data = json.loads(web_data)  # parse JSON
-                pools = data.get("data", [])  # danh sach pool
-                if not pools:  # token khong co pool nao
+                web_data = gl.nondet.web.render(url, mode="text")
+                data = json.loads(web_data)
+                pools = data.get("data", [])
+                if not pools:
                     return json.dumps({"ok": True, "has_pool": False}, sort_keys=True)
-                attrs = pools[0]["attributes"]  # attrs: thong tin pool dau tien (thanh khoan sau nhat)
-                transactions_h24 = attrs.get("transactions", {}).get("h24", {})  # transactions_h24: so lenh mua/ban 24h
+                attrs = pools[0]["attributes"]  # pool dau tien: thanh khoan sau nhat
+                transactions_h24 = attrs.get("transactions", {}).get("h24", {})
                 return json.dumps(
                     {
                         "ok": True,
                         "has_pool": True,
+                        "price_usd": str(attrs.get("base_token_price_usd") or "0"),
                         "reserve_in_usd": str(attrs.get("reserve_in_usd")),
                         "volume_24h_usd": str(attrs.get("volume_usd", {}).get("h24")),
                         "buys_24h": transactions_h24.get("buys", 0),
@@ -179,24 +186,46 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
-    @gl.public.write  # method ghi state, doi qua consensus cua validator
-    def scan_token(self, token_address: str) -> None:  # scan_token: ham tu dat, doc toan bo facts khach quan cho 1 token
-        key = _normalize_address(token_address)  # key: dia chi da chuan hoa, dung lam key luu tru VA truyen tiep xuong duoi
-        token_address = key  # tu day tro di dung ban da chuan hoa (chac chan la str)
+    def _market_cap(self, price_usd: str, total_supply_raw: int, decimals: int) -> str:
+        # Khong dung float: so hoc float trong GenVM di qua softfloat va de gay
+        # sai lech giua cac validator. Tach chuoi gia thanh phan nguyen + phan
+        # thap phan roi nhan chia bang so nguyen Python.
+        try:
+            if not price_usd or "e" in price_usd or "E" in price_usd:
+                return "0"
+            if "." in price_usd:
+                int_part, frac_part = price_usd.split(".", 1)
+            else:
+                int_part, frac_part = price_usd, ""
+            price_scaled = int((int_part or "0") + frac_part)
+            divisor = 10 ** (len(frac_part) + decimals)
+            return str(price_scaled * total_supply_raw // divisor)
+        except Exception:
+            return "0"
 
-        token_info = self._fetch_token_info(token_address)  # goi Blockscout: token info
-        pool_info = self._fetch_pool(token_address)  # goi GeckoTerminal: pool
+    @gl.public.write
+    def scan_token(self, token_address: str) -> None:
+        key = _normalize_address(token_address)
+        token_address = key
 
-        core_ok = token_info.get("ok", False) and pool_info.get("ok", False)  # core_ok: 2 nguon chinh co doc duoc khong (fail-closed)
+        address_info = self._fetch_address_info(token_address)
+        pool_info = self._fetch_pool(token_address)
 
-        if not core_ok:  # thieu du lieu loi, khong doan bua
-            self.facts[key] = Facts(  # luu Facts danh dau UNRESOLVED, cac field con lai de mac dinh an toan
+        core_ok = address_info.get("ok", False) and pool_info.get("ok", False)
+
+        if not core_ok:  # fail-closed: thieu du lieu loi thi khong doan bua
+            self.facts[key] = Facts(
                 resolved=False,
+                token_name="",
+                token_symbol="",
                 holders_count=0,
                 top_holder_percent=0,
+                top10_percent=0,
                 whale_holder_count=0,
                 is_verified=False,
                 has_pool=False,
+                price_usd="0",
+                market_cap_usd="0",
                 reserve_in_usd="0",
                 volume_24h_usd="0",
                 buys_24h=0,
@@ -205,28 +234,39 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
             )
             return
 
-        total_supply_raw = int(token_info.get("total_supply") or 0)  # total_supply_raw: tong cung dang raw (theo decimals)
-        holders_info = self._fetch_holders(token_address, total_supply_raw)  # goi Blockscout: danh sach holder
-        verification_info = self._fetch_verification(token_address)  # goi Blockscout: trang thai verify
+        total_supply_raw = int(address_info.get("total_supply") or 0)
+        holders_info = self._fetch_holders(token_address, total_supply_raw)
 
-        has_pool = pool_info.get("has_pool", False)  # has_pool: token co pool khong
-        pool_age_hours = 0  # pool_age_hours: mac dinh 0 neu khong co pool
-        if has_pool and pool_info.get("pool_created_at"):  # chi tinh tuoi pool khi co du lieu
-            created_at = datetime.fromisoformat(  # created_at: thoi diem tao pool, parse tu chuoi ISO 8601
+        has_pool = pool_info.get("has_pool", False)
+        pool_age_hours = 0
+        if has_pool and pool_info.get("pool_created_at"):
+            created_at = datetime.fromisoformat(
                 pool_info["pool_created_at"].replace("Z", "+00:00")
             )
-            now = datetime.fromisoformat(  # now: thoi gian giao dich DETERMINISTIC (gl.message_raw['datetime'], moi validator giong nhau)
+            # gl.message_raw["datetime"]: thoi gian giao dich DETERMINISTIC
+            # (gl.vm.get_timestamp() khong ton tai)
+            now = datetime.fromisoformat(
                 gl.message_raw["datetime"].replace("Z", "+00:00")
             )
-            pool_age_hours = max(0, int((now - created_at).total_seconds() // 3600))  # pool_age_hours: chan khong am
+            pool_age_hours = max(0, int((now - created_at).total_seconds() // 3600))
+
+        price_usd = pool_info.get("price_usd", "0") if has_pool else "0"
+        market_cap_usd = self._market_cap(
+            price_usd, total_supply_raw, int(address_info.get("decimals") or 18)
+        )
 
         self.facts[key] = Facts(
             resolved=True,
-            holders_count=int(token_info.get("holders_count") or 0),
+            token_name=str(address_info.get("name") or ""),
+            token_symbol=str(address_info.get("symbol") or ""),
+            holders_count=int(address_info.get("holders_count") or 0),
             top_holder_percent=holders_info.get("top_holder_percent", 0) if holders_info.get("ok") else 0,
+            top10_percent=holders_info.get("top10_percent", 0) if holders_info.get("ok") else 0,
             whale_holder_count=holders_info.get("whale_holder_count", 0) if holders_info.get("ok") else 0,
-            is_verified=verification_info.get("is_verified", False),
+            is_verified=address_info.get("is_verified", False),
             has_pool=has_pool,
+            price_usd=price_usd,
+            market_cap_usd=market_cap_usd,
             reserve_in_usd=pool_info.get("reserve_in_usd", "0") if has_pool else "0",
             volume_24h_usd=pool_info.get("volume_24h_usd", "0") if has_pool else "0",
             buys_24h=pool_info.get("buys_24h", 0) if has_pool else 0,
@@ -234,25 +274,25 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
             pool_age_hours=pool_age_hours,
         )
 
-    @gl.public.view  # method chi doc, khong doi state
-    def get_facts(self, token_address: str) -> Facts:  # get_facts: ham tu dat, tra ve Facts da scan cua 1 token
+    @gl.public.view
+    def get_facts(self, token_address: str) -> Facts:
         return self.facts[_normalize_address(token_address)]
 
-    def _observe_source(self, token_address: str) -> dict:  # _observe_source: ham tu dat, doc source code roi hoi AI quan sat dong
-        url = f"{BLOCKSCOUT_BASE}/smart-contracts/{token_address}"  # url: endpoint smart-contract tren Blockscout
+    def _observe_source(self, token_address: str) -> dict:
+        url = f"{BLOCKSCOUT_BASE}/smart-contracts/{token_address}"
 
-        def fetch_and_analyze() -> str:  # fetch_and_analyze: closure non-deterministic, fetch + hoi AI trong CUNG 1 khoi
+        def fetch_and_analyze() -> str:  # fetch + hoi AI trong CUNG 1 khoi nondet
             try:
-                web_data = gl.nondet.web.render(url, mode="text")  # goi web lay source code
-                data = json.loads(web_data)  # parse JSON
-                if not isinstance(data, dict) or not data.get("is_verified"):  # khong verify -> khong co source de doc
+                web_data = gl.nondet.web.render(url, mode="text")
+                data = json.loads(web_data)
+                if not isinstance(data, dict) or not data.get("is_verified"):
                     return json.dumps({"ok": True, "has_source": False}, sort_keys=True)
-                source_code = (data.get("source_code") or "")[:MAX_SOURCE_CHARS]  # source_code: cat bot tranh prompt qua to
-                if not source_code:  # verify nhung khong co source_code (hiem, phong thu)
+                source_code = (data.get("source_code") or "")[:MAX_SOURCE_CHARS]
+                if not source_code:
                     return json.dumps({"ok": True, "has_source": False}, sort_keys=True)
-                prompt = OBSERVATION_PROMPT.format(source_code=source_code)  # prompt: dien source code vao mau cau hoi
-                result = gl.nondet.exec_prompt(prompt, response_format="json")  # goi LLM, tra ve dict da parse JSON san
-                return json.dumps(  # chuan hoa lai CHI 5 field bool, khong lay gi khac AI co the them vao
+                prompt = OBSERVATION_PROMPT.format(source_code=source_code)
+                result = gl.nondet.exec_prompt(prompt, response_format="json")
+                return json.dumps(  # chi lay dung 5 field bool, bo moi thu AI them vao
                     {
                         "ok": True,
                         "has_source": True,
@@ -264,12 +304,12 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
                     },
                     sort_keys=True,
                 )
-            except Exception as e:  # loi mang, loi parse JSON cua AI...
+            except Exception as e:
                 return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
 
-        # prompt_comparative: LLM giam khao so sanh ket qua leader/validator theo principle,
-        # KHONG dung strict_eq vi moi validator chay 1 model LLM khac nhau (Gemini/GPT-oss/Kimi/...),
-        # output se khong bao gio byte-giong-het-nhau (da kiem chung that: strict_eq luon NO_MAJORITY).
+        # prompt_comparative chu KHONG strict_eq: moi validator chay 1 model LLM
+        # khac nhau nen output khong bao gio byte-giong-het-nhau (da kiem chung
+        # that: strict_eq luon NO_MAJORITY voi exec_prompt).
         raw = gl.eq_principle.prompt_comparative(
             fetch_and_analyze,
             principle=(
@@ -280,13 +320,13 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
         )
         return json.loads(raw)
 
-    @gl.public.write  # method ghi state, doi qua consensus cua validator
-    def observe_token(self, token_address: str) -> None:  # observe_token: ham tu dat, chay tang quan sat AI cho 1 token
-        key = _normalize_address(token_address)  # key: dia chi da chuan hoa, dung lam key luu tru VA truyen tiep xuong duoi
-        result = self._observe_source(key)  # goi Blockscout + AI
+    @gl.public.write
+    def observe_token(self, token_address: str) -> None:
+        key = _normalize_address(token_address)
+        result = self._observe_source(key)
 
-        if not result.get("ok") or not result.get("has_source"):  # loi mang HOAC khong co source de doc -> khong quan sat duoc
-            self.observations[key] = Observations(  # luu quan sat danh dau CHUA QUAN SAT, cac co mac dinh False
+        if not result.get("ok") or not result.get("has_source"):
+            self.observations[key] = Observations(
                 observed=False,
                 has_mint=False,
                 owner_can_pause=False,
@@ -305,93 +345,101 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
             is_proxy=result.get("is_proxy", False),
         )
 
-    @gl.public.view  # method chi doc, khong doi state
-    def get_observations(self, token_address: str) -> Observations:  # get_observations: ham tu dat, tra ve quan sat AI da luu cua 1 token
+    @gl.public.view
+    def get_observations(self, token_address: str) -> Observations:
         return self.observations[_normalize_address(token_address)]
 
-    @gl.public.write  # method ghi state, KHONG co khoi non-deterministic nao - CODE THUAN tinh diem
-    def compute_verdict(self, token_address: str) -> None:  # compute_verdict: ham tu dat, cong tru diem theo scoring-spec.md, KHONG nho AI
-        key = _normalize_address(token_address)  # key: dia chi da chuan hoa, dung lam key luu tru
-        default_facts = Facts(  # default_facts: dung khi chua scan_token, coi nhu chua co du lieu
-            resolved=False, holders_count=0, top_holder_percent=0, whale_holder_count=0,
-            is_verified=False, has_pool=False, reserve_in_usd="0", volume_24h_usd="0",
+    @gl.public.write  # KHONG co khoi nondet: CODE THUAN tinh diem theo scoring-spec.md
+    def compute_verdict(self, token_address: str) -> None:
+        key = _normalize_address(token_address)
+        default_facts = Facts(
+            resolved=False, token_name="", token_symbol="", holders_count=0,
+            top_holder_percent=0, top10_percent=0, whale_holder_count=0,
+            is_verified=False, has_pool=False, price_usd="0", market_cap_usd="0",
+            reserve_in_usd="0", volume_24h_usd="0",
             buys_24h=0, sells_24h=0, pool_age_hours=0,
         )
-        default_obs = Observations(  # default_obs: dung khi chua observe_token, coi nhu AI chua quan sat
+        default_obs = Observations(
             observed=False, has_mint=False, owner_can_pause=False,
             sell_blocked=False, high_fee=False, is_proxy=False,
         )
-        facts = self.facts.get(key, default_facts)  # facts: doc lai Facts da luu tu CP1, hoac mac dinh neu chua scan
-        obs = self.observations.get(key, default_obs)  # obs: doc lai Observations da luu tu CP2, hoac mac dinh neu chua observe
+        facts = self.facts.get(key, default_facts)
+        obs = self.observations.get(key, default_obs)
 
-        if not facts.resolved:  # thieu du lieu loi tu Blockscout/GeckoTerminal -> UNRESOLVED, khong doan bua
+        if not facts.resolved:
             self.verdicts[key] = Verdict(
                 resolved=False,
                 risk_score=0,
                 verdict="UNRESOLVED",
-                flags="Khong doc duoc du lieu tu Blockscout/GeckoTerminal",
+                flags="Could not read reliable data from Blockscout or GeckoTerminal",
                 observed_at=gl.message_raw["datetime"],
             )
             return
 
-        risk = 0  # risk: bien tu dat, diem rui ro dang cong don, bat dau tu 0
-        flags = []  # flags: bien tu dat, danh sach ly do da bat co
+        risk = 0
+        flags = []
 
-        if not facts.is_verified:  # co do 1: source code chua verify
+        if not facts.is_verified:
             risk += 20
-            flags.append("Source code chua duoc verify")
-        if obs.has_mint:  # co do 2: owner mint them token duoc
+            flags.append("Source code has not been verified")
+        if obs.has_mint:
             risk += 15
-            flags.append("Owner co the mint them token")
-        if obs.owner_can_pause:  # co do 3: owner tam dung giao dich duoc
+            flags.append("Owner can mint additional tokens")
+        if obs.owner_can_pause:
             risk += 10
-            flags.append("Owner co the tam dung giao dich")
-        if obs.sell_blocked:  # co do 4 (nang): co logic chan ban, honeypot ro
+            flags.append("Owner can pause trading")
+        if obs.sell_blocked:
             risk += 25
-            flags.append("Co logic chan ban (honeypot)")
-        if obs.high_fee:  # co do 5: phi giao dich cao bat thuong
+            flags.append("Contains logic that can block selling (honeypot)")
+        if obs.high_fee:
             risk += 10
-            flags.append("Phi giao dich cao bat thuong hoac owner chinh tuy y")
-        if obs.is_proxy:  # co do 6: contract proxy, code co the bi doi sau
+            flags.append("Unusually high fees, or fees the owner can change at will")
+        if obs.is_proxy:
             risk += 10
-            flags.append("Contract la proxy, code thuc thi co the bi doi")
+            flags.append("Contract is a proxy; the executed code can be swapped later")
 
-        if facts.top_holder_percent > 50:  # co do 7a: vi ca nhan lon nhat giu qua nhieu
+        if facts.top_holder_percent > 50:
             risk += 20
-            flags.append("Vi ca nhan lon nhat giu qua 50% supply")
-        elif facts.top_holder_percent > 30:  # co do 7b: muc nhe hon
+            flags.append("The largest individual wallet holds over 50% of supply")
+        elif facts.top_holder_percent > 30:
             risk += 10
-            flags.append("Vi ca nhan lon nhat giu qua 30% supply")
+            flags.append("The largest individual wallet holds over 30% of supply")
 
-        if facts.holders_count < 50:  # co do 8: qua it nguoi giu token
+        if facts.top10_percent > 50:
             risk += 10
-            flags.append("It hon 50 vi dang giu token")
+            flags.append("The top 10 individual wallets hold over 50% of supply combined")
 
-        if not facts.has_pool:  # co do 9a (nang): khong co pool thanh khoan nao
+        if facts.holders_count < 50:
+            risk += 10
+            flags.append("Fewer than 50 wallets hold this token")
+
+        if not facts.has_pool:
             risk += 25
-            flags.append("Khong co pool thanh khoan tren GeckoTerminal")
-        else:  # co pool - cac co do 9b/11 CHI xet khi thuc su co pool, tranh dem 2 lan voi 9a
-            if float(facts.reserve_in_usd) < 5000:  # co do 9b: co pool nhung thanh khoan qua mong
+            flags.append("No liquidity pool found on GeckoTerminal")
+        else:  # cac co ve pool CHI xet khi thuc su co pool, tranh dem 2 lan
+            # so sanh bang so nguyen (cat phan thap phan) thay vi float
+            reserve_whole = int((facts.reserve_in_usd or "0").split(".")[0] or "0")
+            if reserve_whole < 5000:
                 risk += 15
-                flags.append("Thanh khoan pool duoi 5000 USD")
-            if facts.pool_age_hours < 24:  # co do 11: pool qua moi
+                flags.append("Pool liquidity is under $5,000")
+            if facts.pool_age_hours < 24:
                 risk += 10
-                flags.append("Pool moi tao duoi 24 gio")
+                flags.append("Pool was created less than 24 hours ago")
 
-        if facts.buys_24h >= 20 and facts.sells_24h == 0:  # co do 10: hanh vi honeypot - mua duoc, ban khong duoc
+        if facts.buys_24h >= 20 and facts.sells_24h == 0:
             risk += 20
-            flags.append("24h co nhieu lenh mua nhung khong co lenh ban nao (nghi honeypot)")
+            flags.append("Many buys but zero sells in the last 24h (suspected honeypot)")
 
-        if facts.whale_holder_count >= 3:  # co xanh a: nhieu vi lon doc lap, phan tan tot
+        if facts.whale_holder_count >= 3:
             risk -= 15
-            flags.append("Co tu 3 vi lon doc lap tro len (phan tan tot)")
-        elif facts.whale_holder_count >= 1:  # co xanh b: it nhat 1 vi lon doc lap
+            flags.append("Three or more independent large holders (healthy distribution)")
+        elif facts.whale_holder_count >= 1:
             risk -= 8
-            flags.append("Co it nhat 1 vi lon doc lap")
+            flags.append("At least one independent large holder")
 
-        risk = max(0, min(100, risk))  # chan bien 0-100
+        risk = max(0, min(100, risk))
 
-        if risk <= 25:  # map risk -> verdict theo scoring-spec.md
+        if risk <= 25:
             verdict_str = "SAFE"
         elif risk <= 60:
             verdict_str = "SUSPICIOUS"
@@ -402,10 +450,10 @@ class RugRadar(gl.Contract):  # RugRadar: ten contract tu dat, ke thua gl.Contra
             resolved=True,
             risk_score=risk,
             verdict=verdict_str,
-            flags="; ".join(flags) if flags else "Khong co dau hieu nao duoc ghi nhan",
+            flags="; ".join(flags) if flags else "No signals recorded",
             observed_at=gl.message_raw["datetime"],
         )
 
-    @gl.public.view  # method chi doc, khong doi state
-    def get_verdict(self, token_address: str) -> Verdict:  # get_verdict: ham tu dat, tra ve ket qua cham diem da luu cua 1 token
+    @gl.public.view
+    def get_verdict(self, token_address: str) -> Verdict:
         return self.verdicts[_normalize_address(token_address)]

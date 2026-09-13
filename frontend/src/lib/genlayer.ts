@@ -3,7 +3,7 @@ import { testnetAsimov } from "genlayer-js/chains";
 import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar that da deploy o CP5, tren GenLayer Asimov Testnet
-export const CONTRACT_ADDRESS = "0x9A3DDb5B496e23e79D6Ffa1F3Bb6F53777E4a344" as const;
+export const CONTRACT_ADDRESS = "0xE26f7DFeA81AC9E5b130608B4C074A4E3F57A0AD" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,

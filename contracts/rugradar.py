@@ -109,7 +109,6 @@ class RugRadar(gl.Contract):
                         "ok": True,
                         "holders_count": token.get("holders_count"),
                         "total_supply": token.get("total_supply"),
-                        "decimals": token.get("decimals"),
                         "name": token.get("name") or "",
                         "symbol": token.get("symbol") or "",
                         "is_verified": bool(data.get("is_verified", False)),
@@ -173,6 +172,7 @@ class RugRadar(gl.Contract):
                         "ok": True,
                         "has_pool": True,
                         "price_usd": str(attrs.get("base_token_price_usd") or "0"),
+                        "fdv_usd": str(attrs.get("fdv_usd") or "0"),
                         "reserve_in_usd": str(attrs.get("reserve_in_usd")),
                         "volume_24h_usd": str(attrs.get("volume_usd", {}).get("h24")),
                         "buys_24h": transactions_h24.get("buys", 0),
@@ -185,23 +185,6 @@ class RugRadar(gl.Contract):
                 return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
-
-    def _market_cap(self, price_usd: str, total_supply_raw: int, decimals: int) -> str:
-        # Khong dung float: so hoc float trong GenVM di qua softfloat va de gay
-        # sai lech giua cac validator. Tach chuoi gia thanh phan nguyen + phan
-        # thap phan roi nhan chia bang so nguyen Python.
-        try:
-            if not price_usd or "e" in price_usd or "E" in price_usd:
-                return "0"
-            if "." in price_usd:
-                int_part, frac_part = price_usd.split(".", 1)
-            else:
-                int_part, frac_part = price_usd, ""
-            price_scaled = int((int_part or "0") + frac_part)
-            divisor = 10 ** (len(frac_part) + decimals)
-            return str(price_scaled * total_supply_raw // divisor)
-        except Exception:
-            return "0"
 
     @gl.public.write
     def scan_token(self, token_address: str) -> None:
@@ -251,9 +234,10 @@ class RugRadar(gl.Contract):
             pool_age_hours = max(0, int((now - created_at).total_seconds() // 3600))
 
         price_usd = pool_info.get("price_usd", "0") if has_pool else "0"
-        market_cap_usd = self._market_cap(
-            price_usd, total_supply_raw, int(address_info.get("decimals") or 18)
-        )
+        # fdv_usd cua GeckoTerminal: gia x tong cung, ca hai deu tu CUNG 1 nguon.
+        # Truoc day tu tinh bang gia (GeckoTerminal) x total_supply (Blockscout),
+        # ma total_supply cua Blockscout lech 1000 lan -> market cap sai 1000 lan.
+        market_cap_usd = pool_info.get("fdv_usd", "0") if has_pool else "0"
 
         self.facts[key] = Facts(
             resolved=True,

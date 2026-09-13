@@ -12,6 +12,7 @@ import {
   type Verdict,
 } from "./lib/genlayer";
 import { VerdictCard } from "./components/VerdictCard";
+import { MarketPanel } from "./components/MarketPanel";
 
 type ViewState =
   | { kind: "idle" }
@@ -182,6 +183,7 @@ export default function App() {
                 facts={view.facts}
                 observations={view.observations}
               />
+              <MarketPanel tokenAddress={view.tokenAddress} />
               <button
                 onClick={() => handleScan(view.tokenAddress)}
                 className="text-xs text-ink-muted underline decoration-border-soft underline-offset-4 hover:text-ink"

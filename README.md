@@ -10,7 +10,7 @@ rulebook, and code alone renders the verdict: **SAFE**, **SUSPICIOUS**, or
 Built for the GenLayer Agent Tank Hackathon, Onchain Justice theme.
 
 **Live contract (GenLayer Asimov Testnet):**
-[`0x9A3DDb5B496e23e79D6Ffa1F3Bb6F53777E4a344`](https://explorer-asimov.genlayer.com/address/0x9A3DDb5B496e23e79D6Ffa1F3Bb6F53777E4a344)
+[`0xE26f7DFeA81AC9E5b130608B4C074A4E3F57A0AD`](https://explorer-asimov.genlayer.com/address/0xE26f7DFeA81AC9E5b130608B4C074A4E3F57A0AD)
 
 ## Why "a court" and not "a bot"
 

@@ -198,3 +198,31 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   vao truong `recipient` cua transaction.
 - **Cách sửa:** doc `recipient`. Hau qua cua nham lan nay: script thu lai 12 lan
   nen da deploy 12 ban contract giong het nhau, chi dung ban cuoi.
+
+### 18. Market cap sai 1000 lan: tron don vi cua 2 nguon
+- **Triệu chứng:** KOX ra market cap ~32.8 TRIEU USD trong khi GMGN va bot
+  Telegram deu bao ~4-27 NGHIN USD. Meme coin moi tao khong the co von hoa do.
+- **Nguyên nhân gốc:** `_market_cap()` lay GIA tu GeckoTerminal nhan voi
+  `total_supply` cua Blockscout. Blockscout tra `1e30` raw con GeckoTerminal tra
+  `1e27` cho cung token do - lech dung 1000 lan. Cac ty le holder KHONG bi anh
+  huong vi ca tu lan mau deu lay tu Blockscout, chi rieng market cap tron 2 nguon.
+- **Cách sửa:** doc thang `fdv_usd` co san trong response `/pools` ma contract
+  DA goi roi (khong ton them request), xoa han `_market_cap()` va toan bo phep
+  toan so nguyen ne softfloat. Gia va cung gio ve chung 1 nguon.
+- **Bài học:** khong bao gio nhan/chia 2 con so den tu 2 API khac nhau. Neu mot
+  nguon da tinh san ket qua thi lay ket qua do.
+
+### 19. "Transaction reverted to consensus contract" la do TU MINH ghi de gas price
+- **Triệu chứng:** goi `scan_token`/`observe_token` bi revert ngay luc gui, khong
+  theo quy luat nao. Vi du 49.8 GEN, nonce sach, contract mo phong chay tot.
+- **Chẩn đoán sai da di qua (ghi lai de khong lap lai):** (1) "gui 2 tx qua sat
+  nhau" - sai; (2) "phai cho tx truoc FINALIZED chu khong phai ACCEPTED" - sai,
+  tx deploy da FINALIZED ma van revert.
+- **Nguyên nhân gốc:** mieng va `eth_gasPrice = 30 gwei` them o muc 16 de chua
+  ket mempool. Consensus contract tinh phi tu gas price, bom len 30 gwei thi no
+  tu choi. Thu A/B cung 1 lenh cach nhau 15 giay: khong ghi de -> gui duoc;
+  ghi de -> revert.
+- **Cách sửa:** bo ghi de. Frontend (`genlayer.ts`) chua bao gio dung mieng va
+  nay nen khong bi anh huong.
+- **Bài học:** mot ban va cho loi A co the la nguyen nhan cua loi B. Khi gap loi
+  la, thu bo cac mieng va cua chinh minh TRUOC khi di dung gia thuyet ve mang.

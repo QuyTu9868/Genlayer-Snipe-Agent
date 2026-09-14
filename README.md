@@ -111,11 +111,27 @@ that choice before reusing this pattern anywhere real funds are involved.
 Both are public, unauthenticated, read-only APIs. Full endpoint reference in
 [`references/data-sources.md`](references/data-sources.md).
 
+The web UI additionally shows a **market context** panel fed by
+[GMGN's OpenAPI](https://docs.gmgn.ai) (chain `robinhood`). Nothing in that
+panel is evidence in the case: it never reaches the contract, never touches the
+risk score, and the case file renders normally when it is absent. It exists so a
+reader can compare the court's on-chain record against the market numbers they
+are used to seeing elsewhere. It needs `VITE_GMGN_API_KEY` in `frontend/.env`;
+without one the panel simply does not render.
+
 ## Known limitations
 
 - GenLayer's public testnet (Asimov) occasionally rejects a write with a
   generic RPC-level revert or `LEADER_TIMEOUT` under load; retrying succeeds
   in every case observed. This is a testnet infrastructure characteristic,
   not a contract bug - see `references/error-log.md`.
+- Blockscout sits behind a bot challenge that intermittently serves an HTML
+  page instead of JSON. When a validator gets that page, the scan fails closed
+  and the token is ruled `UNRESOLVED` rather than scored on partial evidence.
+  Re-opening the case later usually succeeds.
+- Market cap comes from GeckoTerminal's `fdv_usd`, which is price times total
+  supply. For the tokens seen so far circulating supply equals total supply, so
+  the two coincide, but the UI labels it honestly rather than claiming a
+  circulating-supply market cap.
 - Scoring weights in `scoring-spec.md` are a starting point tuned against a
   handful of real tokens, not a formally calibrated model.

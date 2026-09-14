@@ -20,6 +20,7 @@ export type MarketData = {
   priceUsd: number;
   marketCapUsd: number;
   liquidityUsd: number;
+  quoteSymbol: string; // dong tien doi ung cua pool (ETH, USDG...), chi de hien thi
   volume24hUsd: number;
   buys24h: number;
   sells24h: number;
@@ -77,9 +78,14 @@ function ratioToPercent(value: unknown): number {
 export async function getMarketData(tokenAddress: string): Promise<MarketData> {
   const info = await callGmgn("/v1/token/info", tokenAddress);
   const price = (info.price ?? {}) as Record<string, unknown>;
+  const pool = (info.pool ?? {}) as Record<string, unknown>;
 
   const totalSupply = num(info.total_supply);
   const priceUsd = num(price.price);
+  // info.liquidity la so luong dong quote THO (vd 3.89 ETH), KHONG phai USD, du
+  // trong cung 1 field voi cac gia tri USD khac - de nham lan. pool.base_reserve_value
+  // + pool.quote_reserve_value la GMGN da tu quy doi ca 2 phia pool sang USD.
+  const liquidityUsd = num(pool.base_reserve_value) + num(pool.quote_reserve_value);
 
   let security: MarketData["security"];
   try {
@@ -104,7 +110,8 @@ export async function getMarketData(tokenAddress: string): Promise<MarketData> {
     logo: String(info.logo ?? ""),
     priceUsd,
     marketCapUsd: priceUsd * totalSupply,
-    liquidityUsd: num(info.liquidity),
+    liquidityUsd: liquidityUsd || num(info.liquidity), // du phong neu thieu du lieu pool
+    quoteSymbol: String(pool.quote_symbol ?? ""),
     volume24hUsd: num(price.volume_24h),
     buys24h: num(price.buys_24h),
     sells24h: num(price.sells_24h),

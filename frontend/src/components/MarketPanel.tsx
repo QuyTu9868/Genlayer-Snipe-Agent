@@ -84,7 +84,7 @@ export function MarketPanel({ tokenAddress }: { tokenAddress: string }) {
 
       <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         <Stat label="Market cap" value={compactUsd(data.marketCapUsd)} />
-        <Stat label="Liquidity" value={compactUsd(data.liquidityUsd)} />
+        <Stat label="Liquidity" value={compactUsd(data.liquidityUsd) + (data.quoteSymbol ? ` (${data.quoteSymbol})` : "")} />
         <Stat label="24h volume" value={compactUsd(data.volume24hUsd)} />
         <Stat label="Age" value={age(data.createdAt)} />
         <Stat label="Price" value={price(data.priceUsd)} />

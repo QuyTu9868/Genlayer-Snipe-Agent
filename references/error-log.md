@@ -226,3 +226,28 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   nay nen khong bi anh huong.
 - **Bài học:** mot ban va cho loi A co the la nguyen nhan cua loi B. Khi gap loi
   la, thu bo cac mieng va cua chinh minh TRUOC khi di dung gia thuyet ve mang.
+
+### 20. Tx dung yen o PENDING: tang consensus cua Asimov ngung xu ly (khong phai loi minh)
+- **Triệu chứng:** moi `scan_token` deu khong ghi duoc Facts, ke ca nhanh
+  fail-closed. Doc tx bang `getTransaction` thi bao contract `getTransactionData`
+  revert voi chu ky `0x1f90236d`.
+- **Cac chan doan SAI da di qua (ghi lai de khong lap lai):**
+  1. "Token moi tao, du lieu bien dong nen strict_eq khong dong thuan duoc" -
+     SAI. Thu doi chung voi HOP (token cu, tung chay ngon) thi cung trugt y het.
+  2. "Tx chua tung len chain" - SAI. Tim dung tx EVM theo nonce roi doc receipt:
+     `status: success`, gasUsed 920k, 4 log. Giao dich GenLayer CO duoc tao.
+  3. "Ma tx client tra ve bi sai" - SAI. Giai ma log cua receipt ra dung ma do.
+- **Cách tìm ra nguyên nhân thật:** dem su kien phat ra tu consensus contract
+  `0x6CAFF6769d70824745AD895663409DC70aB5B28E` trong 2 cua so 900 block:
+  luc 14:10 (chay duoc) co **1318** su kien, luc 02:00 (trugt) chi con **7**.
+  Chain van de block binh thuong (62 block/30 giay), vi du tien, nonce sach.
+- **Nguyên nhân gốc:** validator cua testnet Asimov ngung nhan viec. Tx nam o
+  `PENDING/NOT_VOTED`, da co `activator` nhung `lastLeader = 0x0` va
+  `lastVoteTimestamp = 0`.
+- **Cách xử lý:** khong co cach nao tu phia minh. DUNG thu lai lien tuc (moi lan
+  thu day them 1 tx vao hang doi cua vi, `txSlot` da len toi 18), doi mang hoi
+  lai roi chay lai.
+- **Bài học:** truoc khi nghi ngo code, do xem HA TANG co dang chay khong.
+  Dem su kien on-chain giua 2 khung gio la phep do re va dut khoat.
+  Va: `writeContract` tra ve hash KHONG co nghia la tx da chay - phai doc
+  receipt EVM va trang thai GenLayer moi biet.

@@ -1,6 +1,6 @@
 # RugRadar frontend
 
-Trang don gian: nhap dia chi token -> doc verdict tu contract that tren GenLayer Asimov Testnet.
+Trang don gian: nhap dia chi token -> doc verdict tu contract that tren GenLayer Studionet.
 Stack: Vite + React + TypeScript + Tailwind v4 + genlayer-js. UI tieng Anh (quyet dinh CP6).
 
 ## Chay local
@@ -30,7 +30,7 @@ Mo `http://localhost:5173`. Co the mo thang toi 1 token da scan qua query param,
 ## Cau hinh
 
 Dia chi contract va mang muc tieu dang HARDCODE trong `src/lib/genlayer.ts`
-(`CONTRACT_ADDRESS`, chain `testnetAsimov` tu `genlayer-js/chains`) - khong dung
+(`CONTRACT_ADDRESS`, chain `studionet` tu `genlayer-js/chains`) - khong dung
 env var, vi contract nay chi deploy 1 lan cho ban nop hackathon, khong can doi
 qua nhieu moi truong.
 

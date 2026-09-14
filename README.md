@@ -9,8 +9,11 @@ rulebook, and code alone renders the verdict: **SAFE**, **SUSPICIOUS**, or
 
 Built for the GenLayer Agent Tank Hackathon, Onchain Justice theme.
 
-**Live contract (GenLayer Asimov Testnet):**
-[`0xE26f7DFeA81AC9E5b130608B4C074A4E3F57A0AD`](https://explorer-asimov.genlayer.com/address/0xE26f7DFeA81AC9E5b130608B4C074A4E3F57A0AD)
+**Live contract (GenLayer Studionet):**
+[`0x391231076da23971aF9cF90eD8816B1E44c4A755`](https://explorer-studio.genlayer.com/address/0x391231076da23971aF9cF90eD8816B1E44c4A755)
+
+Also deployed to the public GenLayer Bradbury Testnet:
+[`0xe297716bA5Aab8672539D97d646e8010EcCCc6Da`](https://explorer-bradbury.genlayer.com/address/0xe297716bA5Aab8672539D97d646e8010EcCCc6Da)
 
 ## Why "a court" and not "a bot"
 
@@ -121,10 +124,12 @@ without one the panel simply does not render.
 
 ## Known limitations
 
-- GenLayer's public testnet (Asimov) occasionally rejects a write with a
-  generic RPC-level revert or `LEADER_TIMEOUT` under load; retrying succeeds
-  in every case observed. This is a testnet infrastructure characteristic,
-  not a contract bug - see `references/error-log.md`.
+- The web UI runs on GenLayer Studionet. During the build window both public
+  testnets stalled on transaction processing: Asimov's consensus activity fell
+  from ~1,300 events per 900 blocks to under 10, and on Bradbury a deploy was
+  accepted but follow-up writes sat unprocessed or were rejected at submission.
+  The same contract runs the full scan -> testimony -> verdict pipeline on
+  Studionet in about two minutes. Measurements are in `references/error-log.md`.
 - Blockscout sits behind a bot challenge that intermittently serves an HTML
   page instead of JSON. When a validator gets that page, the scan fails closed
   and the token is ruled `UNRESOLVED` rather than scored on partial evidence.

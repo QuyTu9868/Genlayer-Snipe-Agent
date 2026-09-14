@@ -29,7 +29,7 @@ const STEP_LABELS: Record<ScanStep, string> = {
 };
 
 function explorerUrl(address: string): string {
-  return `https://explorer-asimov.genlayer.com/address/${address}`;
+  return `https://explorer-studio.genlayer.com/address/${address}`;
 }
 
 export default function App() {
@@ -136,7 +136,7 @@ export default function App() {
             <div className="rounded-xl border border-border-soft bg-surface p-8">
               <p className="text-sm text-ink">No case on file yet for this token.</p>
               <p className="mt-2 text-sm text-ink-muted">
-                Opening a case submits three transactions to the GenLayer Asimov Testnet
+                Opening a case submits three transactions to the GenLayer Studionet
                 (evidence gathering, AI testimony, verdict). No wallet needed to view a case.
               </p>
               <button
@@ -211,7 +211,7 @@ export default function App() {
             >
               {CONTRACT_ADDRESS}
             </a>{" "}
-            on GenLayer Asimov Testnet
+            on GenLayer Studionet
           </p>
           <p className="mt-1">
             Read-only for anyone. Verdicts are computed entirely in code from on-chain facts and

@@ -1,9 +1,10 @@
 import { createAccount, createClient } from "genlayer-js";
-import { testnetAsimov } from "genlayer-js/chains";
+import { studionet } from "genlayer-js/chains";
 import type { TransactionStatus } from "genlayer-js/types";
 
-// CONTRACT_ADDRESS: dia chi RugRadar that da deploy o CP5, tren GenLayer Asimov Testnet
-export const CONTRACT_ADDRESS = "0xE26f7DFeA81AC9E5b130608B4C074A4E3F57A0AD" as const;
+// CONTRACT_ADDRESS: dia chi RugRadar tren GenLayer Studionet. Chuyen tu Asimov sang
+// vi ca Asimov lan Bradbury nghen tang xu ly giao dich (error-log muc 20, 22).
+export const CONTRACT_ADDRESS = "0x391231076da23971aF9cF90eD8816B1E44c4A755" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
@@ -25,7 +26,7 @@ function getDemoAccount() {
 
 // getClient: client doc (khong can vi) hoac client ky duoc voi vi demo cua app
 export function getClient(withSigner = false) {
-  const config: Record<string, unknown> = { chain: testnetAsimov };
+  const config: Record<string, unknown> = { chain: studionet };
   if (withSigner) config.account = getDemoAccount();
   return createClient(config);
 }

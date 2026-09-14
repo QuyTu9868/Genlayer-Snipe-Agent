@@ -5,6 +5,7 @@ import {
   getObservations,
   getVerdict,
   isValidAddress,
+  previewVerdict,
   runFullScan,
   type Facts,
   type Observations,
@@ -13,17 +14,18 @@ import {
 } from "./lib/genlayer";
 import { VerdictCard } from "./components/VerdictCard";
 import { MarketPanel } from "./components/MarketPanel";
+import { PreliminaryCard } from "./components/PreliminaryCard";
 
 type ViewState =
   | { kind: "idle" }
-  | { kind: "checking" }
+  | { kind: "checking"; tokenAddress: string }
   | { kind: "not_found"; tokenAddress: string }
   | { kind: "verdict"; tokenAddress: string; verdict: Verdict; facts: Facts | null; observations: Observations | null }
-  | { kind: "scanning"; tokenAddress: string; step: ScanStep }
+  | { kind: "scanning"; tokenAddress: string; step: ScanStep; preview: Verdict | null }
   | { kind: "error"; message: string };
 
 const STEP_LABELS: Record<ScanStep, string> = {
-  scan_token: "Gathering on-chain evidence (holders, liquidity, verification)",
+  scan_token: "Gathering evidence and hearing source code testimony (in parallel)",
   observe_token: "Hearing testimony from the source code (AI observation)",
   compute_verdict: "Rendering the verdict",
 };
@@ -47,11 +49,15 @@ export default function App() {
   }, []);
 
   async function handleCheck(tokenAddress: string) {
-    setView({ kind: "checking" });
+    setView({ kind: "checking", tokenAddress });
+    // So tham chay NGAY, song song voi viec tra ho so. No chi doc, khong ghi chain,
+    // nen neu ho so da co thi bo di cung khong ton gi. Meme coin can so trong vai giay.
+    const preview = previewVerdict(tokenAddress);
     try {
       const verdict = await getVerdict(tokenAddress);
       if (!verdict) {
-        setView({ kind: "not_found", tokenAddress });
+        // Chua co ho so: mo vu an luon, khong bat nguoi xem bam them 1 nut
+        handleScan(tokenAddress, preview);
         return;
       }
       const [facts, observations] = await Promise.all([
@@ -74,11 +80,21 @@ export default function App() {
     handleCheck(trimmed);
   }
 
-  async function handleScan(tokenAddress: string) {
-    setView({ kind: "scanning", tokenAddress, step: "scan_token" });
+  async function handleScan(tokenAddress: string, preview?: Promise<Verdict | null>) {
+    setView({ kind: "scanning", tokenAddress, step: "scan_token", preview: null });
+    (preview ?? previewVerdict(tokenAddress)).then((result) =>
+      setView((prev) =>
+        prev.kind === "scanning" && prev.tokenAddress === tokenAddress ? { ...prev, preview: result } : prev,
+      ),
+    );
     try {
       const verdict = await runFullScan(tokenAddress, (step) => {
-        setView({ kind: "scanning", tokenAddress, step });
+        setView((prev) => ({
+          kind: "scanning",
+          tokenAddress,
+          step,
+          preview: prev.kind === "scanning" ? prev.preview : null,
+        }));
       });
       const [facts, observations] = await Promise.all([
         getFacts(tokenAddress),
@@ -129,7 +145,10 @@ export default function App() {
 
         <div className="mt-10">
           {view.kind === "checking" && (
-            <p className="text-sm text-ink-muted">Checking the record. This can take up to 15 seconds on testnet...</p>
+            <div className="space-y-4">
+              <p className="text-sm text-ink-muted">Checking the record...</p>
+              <MarketPanel tokenAddress={view.tokenAddress} />
+            </div>
           )}
 
           {view.kind === "not_found" && (
@@ -172,6 +191,17 @@ export default function App() {
                   );
                 })}
               </ol>
+            </div>
+          )}
+
+          {view.kind === "scanning" && (
+            <div className="mt-4 space-y-4">
+              {view.preview ? (
+                <PreliminaryCard preview={view.preview} />
+              ) : (
+                <p className="text-xs text-ink-muted">Preliminary hearing on one node...</p>
+              )}
+              <MarketPanel tokenAddress={view.tokenAddress} />
             </div>
           )}
 

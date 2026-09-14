@@ -4,7 +4,7 @@ import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar tren GenLayer Studionet. Chuyen tu Asimov sang
 // vi ca Asimov lan Bradbury nghen tang xu ly giao dich (error-log muc 20, 22).
-export const CONTRACT_ADDRESS = "0x3035D639c3d7af963E3d50d80496Ba0677d22AEa" as const;
+export const CONTRACT_ADDRESS = "0xd92B92E377244D4508ad4eff2e115035dD8AC7FC" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
@@ -191,6 +191,34 @@ export async function getObservations(tokenAddress: string): Promise<Observation
   }
 }
 
+// previewVerdict: SO THAM. simulateWriteContract chay thu preview_token tren node leader
+// (leaderOnly), khong dong thuan, khong ghi chain, khong can vi: co ket qua trong vai
+// giay. Khong co loi khai AI. readContract KHONG dung duoc: studionet chan goi ham ghi
+// theo kieu "read". Tra null neu loi/qua han, UI chi viec cho ban an that.
+const PREVIEW_TIMEOUT_MS = 60000;
+
+export async function previewVerdict(tokenAddress: string): Promise<Verdict | null> {
+  const client = getClient();
+  const now = new Date().toISOString();
+  try {
+    const raw = await withTimeout(
+      client.simulateWriteContract({
+        address: CONTRACT_ADDRESS,
+        functionName: "preview_token",
+        // gio that tu trinh duyet: node chay thu dung ngay gia nen tuoi pool se sai
+        args: [tokenAddress, now],
+        leaderOnly: true,
+      }),
+      PREVIEW_TIMEOUT_MS,
+    );
+    // ket qua ve dang Map, doi sang object thuong cho normalizeVerdict
+    const record = raw instanceof Map ? Object.fromEntries(raw) : (raw as Record<string, unknown>);
+    return { ...normalizeVerdict(record), observed_at: now };
+  } catch {
+    return null;
+  }
+}
+
 // runWrite: goi 1 method ghi (scan_token/observe_token/compute_verdict) bang vi demo cua app, cho consensus xac nhan
 async function runWrite(functionName: string, tokenAddress: string): Promise<void> {
   const client = getClient(true);
@@ -215,11 +243,11 @@ export async function runFullScan(
   tokenAddress: string,
   onStep: (step: ScanStep) => void,
 ): Promise<Verdict> {
+  // scan_token (bang chung) va observe_token (loi khai AI) khong phu thuoc nhau nen gui
+  // CUNG LUC. Da do that tren studionet: 2 tx tu cung 1 vi van tach biet, tong thoi gian
+  // ~70s -> ~56s.
   onStep("scan_token");
-  await runWrite("scan_token", tokenAddress);
-
-  onStep("observe_token");
-  await runWrite("observe_token", tokenAddress);
+  await Promise.all([runWrite("scan_token", tokenAddress), runWrite("observe_token", tokenAddress)]);
 
   onStep("compute_verdict");
   await runWrite("compute_verdict", tokenAddress);

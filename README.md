@@ -10,7 +10,7 @@ rulebook, and code alone renders the verdict: **SAFE**, **SUSPICIOUS**, or
 Built for the GenLayer Agent Tank Hackathon, Onchain Justice theme.
 
 **Live contract (GenLayer Studionet):**
-[`0x3035D639c3d7af963E3d50d80496Ba0677d22AEa`](https://explorer-studio.genlayer.com/address/0x3035D639c3d7af963E3d50d80496Ba0677d22AEa)
+[`0xd92B92E377244D4508ad4eff2e115035dD8AC7FC`](https://explorer-studio.genlayer.com/address/0xd92B92E377244D4508ad4eff2e115035dD8AC7FC)
 
 Also deployed to the public GenLayer Bradbury Testnet:
 [`0xe297716bA5Aab8672539D97d646e8010EcCCc6Da`](https://explorer-bradbury.genlayer.com/address/0xe297716bA5Aab8672539D97d646e8010EcCCc6Da)
@@ -47,6 +47,22 @@ GenLayer's multi-validator consensus:
 
 If the evidence cannot be read reliably, the contract records **UNRESOLVED**
 instead of guessing (fail-closed).
+
+## Speed: a preliminary hearing, then the verdict
+
+Memecoins move in seconds, and consensus takes about a minute. So a case opens in
+stages, and each stage is labelled for what it is:
+
+| After | The reader sees | Source |
+|---|---|---|
+| ~2 s | Market context (price, liquidity, holders, taxes) | GMGN |
+| ~4 s | **Preliminary hearing**: score and reasons from one node, no consensus, nothing written on-chain | `preview_token` via `simulateWriteContract` |
+| ~56 s | **Binding verdict**, replacing the preliminary card, stored on-chain | three transactions under validator consensus |
+
+The preliminary hearing runs the exact same evidence-gathering and scoring code as
+the verdict. It leaves out only the AI's source-code testimony, and it is shown in a
+muted, dashed card that says it is not yet ruled. Evidence gathering and AI testimony
+are submitted in parallel, which cut the full ruling from about 70 s to about 56 s.
 
 ## Design principles
 

@@ -208,11 +208,7 @@ class RugRadar(gl.Contract):
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
-    @gl.public.write
-    def scan_token(self, token_address: str) -> None:
-        key = _normalize_address(token_address)
-        token_address = key
-
+    def _gather_facts(self, token_address: str, now_iso: str) -> Facts:
         address_info = self._fetch_address_info(token_address)
         pool_info = self._fetch_pool(token_address)
 
@@ -225,7 +221,7 @@ class RugRadar(gl.Contract):
         # cho phan holder/verify khong kiem chung duoc. Khong co pool lan Blockscout thi
         # khong con bang chung nao -> fail-closed (dia chi khong ton tai roi vao day).
         if not pool_ok or (not blockscout_ok and not has_pool):
-            self.facts[key] = Facts(
+            return Facts(
                 resolved=False,
                 holder_evidence=False,
                 token_name="",
@@ -244,7 +240,6 @@ class RugRadar(gl.Contract):
                 sells_24h=0,
                 pool_age_hours=0,
             )
-            return
 
         total_supply_raw = int(address_info.get("total_supply") or 0)
         holders_info = self._fetch_holders(token_address, total_supply_raw) if blockscout_ok else {"ok": False}
@@ -254,11 +249,7 @@ class RugRadar(gl.Contract):
             created_at = datetime.fromisoformat(
                 pool_info["pool_created_at"].replace("Z", "+00:00")
             )
-            # gl.message_raw["datetime"]: thoi gian giao dich DETERMINISTIC
-            # (gl.vm.get_timestamp() khong ton tai)
-            now = datetime.fromisoformat(
-                gl.message_raw["datetime"].replace("Z", "+00:00")
-            )
+            now = datetime.fromisoformat(now_iso.replace("Z", "+00:00"))
             pool_age_hours = max(0, int((now - created_at).total_seconds() // 3600))
 
         price_usd = pool_info.get("price_usd", "0") if has_pool else "0"
@@ -267,7 +258,7 @@ class RugRadar(gl.Contract):
         # ma total_supply cua Blockscout lech 1000 lan -> market cap sai 1000 lan.
         market_cap_usd = pool_info.get("fdv_usd", "0") if has_pool else "0"
 
-        self.facts[key] = Facts(
+        return Facts(
             resolved=True,
             holder_evidence=blockscout_ok,
             token_name=str(address_info.get("name") or ""),
@@ -286,6 +277,27 @@ class RugRadar(gl.Contract):
             sells_24h=pool_info.get("sells_24h", 0) if has_pool else 0,
             pool_age_hours=pool_age_hours,
         )
+
+    @gl.public.write
+    def scan_token(self, token_address: str) -> None:
+        key = _normalize_address(token_address)
+        # gl.message_raw["datetime"]: thoi gian giao dich DETERMINISTIC, moi validator nhu nhau
+        # (gl.vm.get_timestamp() khong ton tai)
+        self.facts[key] = self._gather_facts(key, gl.message_raw["datetime"])
+
+    @gl.public.write
+    def preview_token(self, token_address: str, now_iso: str) -> Verdict:
+        # SO THAM: frontend goi ham nay qua gen_call, tuc chay thu tren 1 node, KHONG
+        # dong thuan va KHONG ghi state, de co so trong vai giay (meme coin can nhanh).
+        # Dung CHUNG code lay bang chung va cham diem voi ban an that; chi thieu loi
+        # khai AI ve source code, vi chay LLM cung luc de vuot bo nho GenVM.
+        # now_iso do trinh duyet gui: khi chay thu, node dung ngay GIA co dinh (2024) nen
+        # tuoi pool tinh bang gio giao dich se sai. Ban an that van dung gio giao dich.
+        no_testimony = Observations(
+            observed=False, has_mint=False, owner_can_pause=False,
+            sell_blocked=False, high_fee=False, is_proxy=False,
+        )
+        return self._score(self._gather_facts(_normalize_address(token_address), now_iso), no_testimony)
 
     @gl.public.view
     def get_facts(self, token_address: str) -> Facts:
@@ -362,32 +374,15 @@ class RugRadar(gl.Contract):
     def get_observations(self, token_address: str) -> Observations:
         return self.observations[_normalize_address(token_address)]
 
-    @gl.public.write  # KHONG co khoi nondet: CODE THUAN tinh diem theo scoring-spec.md
-    def compute_verdict(self, token_address: str) -> None:
-        key = _normalize_address(token_address)
-        default_facts = Facts(
-            resolved=False, holder_evidence=False, token_name="", token_symbol="", holders_count=0,
-            top_holder_percent=0, top10_percent=0, whale_holder_count=0,
-            is_verified=False, has_pool=False, price_usd="0", market_cap_usd="0",
-            reserve_in_usd="0", volume_24h_usd="0",
-            buys_24h=0, sells_24h=0, pool_age_hours=0,
-        )
-        default_obs = Observations(
-            observed=False, has_mint=False, owner_can_pause=False,
-            sell_blocked=False, high_fee=False, is_proxy=False,
-        )
-        facts = self.facts.get(key, default_facts)
-        obs = self.observations.get(key, default_obs)
-
+    def _score(self, facts: Facts, obs: Observations) -> Verdict:
         if not facts.resolved:
-            self.verdicts[key] = Verdict(
+            return Verdict(
                 resolved=False,
                 risk_score=0,
                 verdict="UNRESOLVED",
                 flags="Could not read reliable data from Blockscout or GeckoTerminal",
                 observed_at=gl.message_raw["datetime"],
             )
-            return
 
         risk = 0
         flags = []
@@ -462,13 +457,32 @@ class RugRadar(gl.Contract):
         else:
             verdict_str = "SCAM"
 
-        self.verdicts[key] = Verdict(
+        return Verdict(
             resolved=True,
             risk_score=risk,
             verdict=verdict_str,
             flags="; ".join(flags) if flags else "No signals recorded",
             observed_at=gl.message_raw["datetime"],
         )
+
+    @gl.public.write  # KHONG co khoi nondet: CODE THUAN tinh diem theo scoring-spec.md
+    def compute_verdict(self, token_address: str) -> None:
+        key = _normalize_address(token_address)
+        default_facts = Facts(
+            resolved=False, holder_evidence=False, token_name="", token_symbol="", holders_count=0,
+            top_holder_percent=0, top10_percent=0, whale_holder_count=0,
+            is_verified=False, has_pool=False, price_usd="0", market_cap_usd="0",
+            reserve_in_usd="0", volume_24h_usd="0",
+            buys_24h=0, sells_24h=0, pool_age_hours=0,
+        )
+        default_obs = Observations(
+            observed=False, has_mint=False, owner_can_pause=False,
+            sell_blocked=False, high_fee=False, is_proxy=False,
+        )
+        facts = self.facts.get(key, default_facts)
+        obs = self.observations.get(key, default_obs)
+
+        self.verdicts[key] = self._score(facts, obs)
 
     @gl.public.view
     def get_verdict(self, token_address: str) -> Verdict:

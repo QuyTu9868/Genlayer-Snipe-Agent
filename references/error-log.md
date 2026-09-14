@@ -318,3 +318,23 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   5 ngay. GMGN hien `open_timestamp` (luc token tot nghiep launchpad Pons, mo giao
   dich); pool thi duoc tao san tu 61 ngay truoc. Moc mo giao dich chi GMGN co. UI
   doi nhan on-chain thanh "Pool created", khoi Market data dung `open_timestamp`.
+
+### 25. Rut ngan thoi gian: so tham tren 1 node + gui song song (meme coin can nhanh)
+- **Muc tieu:** ban an dong thuan mat ~70s. Voi meme coin vai giay la quan trong.
+- **Gui song song:** `scan_token` va `observe_token` khong phu thuoc nhau. Gui cung
+  luc tu CUNG 1 vi tren studionet: 2 tx tach biet, ca 2 ghi thanh cong. Tong ban an
+  ~70s -> ~56s (song song 47.5s + compute 8.7s).
+- **So tham `preview_token(token, now_iso)`:** dung CHUNG `_gather_facts` va `_score`
+  voi ban an that (tach ra tu scan_token/compute_verdict), tra Verdict khong ghi state.
+- **Cac duong thu va ket qua that:**
+  1. `readContract` (gen_call type "read") goi ham ghi: studionet tra
+     "GenVM internal error" / "execution failed". Doi chung `scan_token` cung loi y
+     het -> khong phai loi code moi, studionet chan goi ham ghi theo kieu read.
+  2. `simulateWriteContract` (gen_call type "write"): CHAY, tra ve dang `Map`.
+     `leaderOnly: true` 4.0s, `false` 5.6s. Khong can vi.
+- **Bay:** khi chay thu, node dung `message_raw["datetime"]` GIA co dinh
+  (`2024-11-26T06:42:42Z`) -> tuoi pool = 0 -> so tham gan nham co "pool < 24h" cho
+  token 61 ngay tuoi. Sua: `preview_token` nhan `now_iso` tu trinh duyet; ban an that
+  van dung gio giao dich (deterministic).
+- **Sau sua:** so tham token 富贵 ra SAFE 0 voi dung co "Three or more independent large
+  holders", TRUNG ban an dong thuan. Contract `0xd92B92E377244D4508ad4eff2e115035dD8AC7FC`.

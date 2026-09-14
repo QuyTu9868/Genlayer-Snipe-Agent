@@ -70,9 +70,7 @@ export function MarketPanel({ tokenAddress }: { tokenAddress: string }) {
     <div className="rounded-xl border border-border-soft bg-surface p-6 sm:p-8">
       <div className="flex items-start justify-between gap-4 border-b border-border-soft pb-4">
         <div className="flex items-center gap-3">
-          {data.logo && (
-            <img src={data.logo} alt="" className="h-9 w-9 rounded-full" />
-          )}
+          {/* Khong hien logo: gmgn.ai chan nhung anh tu trang khac (CORP NotSameOrigin) */}
           <div>
             <p className="text-xs uppercase tracking-widest text-ink-muted">Market context</p>
             <p className="font-serif text-lg text-ink">

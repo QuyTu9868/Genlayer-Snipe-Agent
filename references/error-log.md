@@ -251,3 +251,28 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   Dem su kien on-chain giua 2 khung gio la phep do re va dut khoat.
   Va: `writeContract` tra ve hash KHONG co nghia la tx da chay - phai doc
   receipt EVM va trang thai GenLayer moi biet.
+
+### 21. Nghiem thu ban sua market cap (muc 18) tren studionet
+- Asimov van ngung xu ly (muc 20), nen deploy ban contract hien tai len
+  studionet bang vi dung 1 lan va chay du scan -> observe -> verdict cho UNFUCK
+  (`0x00B75840e990fcA55284E7cFBA608F18f64D841B`). Ca 3 buoc ACCEPTED.
+- Ket qua: `market_cap_usd = 6989.36`, GeckoTerminal `fdv_usd = 6989` (khop
+  tuyet doi), GMGN = $7,140 (lech 2% do gia nhich giua 2 lan goi). Holders 23
+  khop dung GMGN. Truoc khi sua, cung cong thuc cho ra con so gap 1000 lan.
+- Verdict: SAFE, risk 5, flags day du. Pipeline dung ve logic; chan duy nhat
+  con lai la ha tang Asimov.
+
+### 22. Bradbury (testnet ke nhiem Asimov) nhan deploy nhung ghi van nghen
+- **Boi canh:** Bradbury va Asimov la CUNG 1 chain (chain id 4221, so block trung,
+  so du vi y het), chi khac consensus contract (Bradbury `0x0112Bf6e...`,
+  Asimov `0x6CAFF676...`). GenLayer cong bo Bradbury la testnet ke nhiem.
+- **Ket qua thu that (14/9 ~08:15-08:35 UTC):** deploy RugRadar len Bradbury
+  ACCEPTED sau ~4.5 phut (`0xe297716bA5Aab8672539D97d646e8010EcCCc6Da`). Nhung
+  `scan_token` qua 10 phut khong ACCEPTED, Facts khong ghi duoc, va lenh
+  `observe_token` gui sau do bi consensus contract revert ngay luc gui.
+- **Doi chung:** cung ban contract, cung token, tren studionet chay tron
+  scan -> observe -> verdict trong ~2 phut, va contract van doc lai duoc sau do.
+- **Ket luan:** ca 2 testnet cong khai deu nghen o tang xu ly giao dich trong
+  khung gio nay; studionet la moi truong duy nhat chay on dinh de demo.
+- **Mau lap lai tren ca 2 testnet:** khi 1 tx toi contract con treo, tx tiep
+  theo tu cung vi bi revert luc gui. Frontend gui 3 tx noi tiep nen se dinh.

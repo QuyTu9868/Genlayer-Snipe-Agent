@@ -4,7 +4,7 @@ import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar tren GenLayer Studionet. Chuyen tu Asimov sang
 // vi ca Asimov lan Bradbury nghen tang xu ly giao dich (error-log muc 20, 22).
-export const CONTRACT_ADDRESS = "0x391231076da23971aF9cF90eD8816B1E44c4A755" as const;
+export const CONTRACT_ADDRESS = "0x98788068E7E16b3f273CFbF319412CCB8223CB30" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
@@ -33,6 +33,7 @@ export function getClient(withSigner = false) {
 
 export type Facts = {
   resolved: boolean;
+  holder_evidence: boolean; // false = Blockscout khong doc duoc luc scan
   token_name: string;
   token_symbol: string;
   holders_count: number;
@@ -95,6 +96,8 @@ function toNumber(value: unknown): number {
 function normalizeFacts(raw: Record<string, unknown>): Facts {
   return {
     resolved: Boolean(raw.resolved),
+    // contract cu khong co truong nay: coi nhu co du bang chung holder
+    holder_evidence: raw.holder_evidence === undefined ? true : Boolean(raw.holder_evidence),
     token_name: String(raw.token_name ?? ""),
     token_symbol: String(raw.token_symbol ?? ""),
     holders_count: toNumber(raw.holders_count),

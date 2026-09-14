@@ -113,11 +113,12 @@ export function VerdictCard({
             <div className="mt-8">
               <p className="text-xs uppercase tracking-widest text-ink-muted">On-chain record</p>
               <div className="mt-3">
-                <Fact label="Source verified" value={facts.is_verified ? "Yes" : "No"} />
-                <Fact label="Holders" value={facts.holders_count.toLocaleString("en-US")} />
-                <Fact label="Top individual holder" value={`${facts.top_holder_percent}%`} />
-                <Fact label="Top 10 individual holders" value={`${facts.top10_percent}%`} />
-                <Fact label="Independent large holders" value={String(facts.whale_holder_count)} />
+                {/* Blockscout khong doc duoc luc scan: hien "Unavailable" thay vi so 0 gay hieu nham */}
+                <Fact label="Source verified" value={facts.holder_evidence ? (facts.is_verified ? "Yes" : "No") : "Unavailable"} />
+                <Fact label="Holders" value={facts.holder_evidence ? facts.holders_count.toLocaleString("en-US") : "Unavailable"} />
+                <Fact label="Top individual holder" value={facts.holder_evidence ? `${facts.top_holder_percent}%` : "Unavailable"} />
+                <Fact label="Top 10 individual holders" value={facts.holder_evidence ? `${facts.top10_percent}%` : "Unavailable"} />
+                <Fact label="Independent large holders" value={facts.holder_evidence ? String(facts.whale_holder_count) : "Unavailable"} />
                 <Fact
                   label="Liquidity pool"
                   value={facts.has_pool ? `$${formatUsd(facts.reserve_in_usd)}` : "None found"}

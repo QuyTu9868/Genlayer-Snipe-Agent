@@ -46,7 +46,16 @@ Chặn biên: `risk = max(0, min(100, risk))`.
 - `risk <= 25` -> SAFE
 - `26 <= risk <= 60` -> SUSPICIOUS
 - `risk > 60` -> SCAM
-- Thiếu data lõi (không đọc được cả verified lẫn thanh khoản) -> UNRESOLVED (fail-closed, không map điểm)
+- Không đọc được GeckoTerminal, HOẶC không có pool mà cũng không đọc được Blockscout -> UNRESOLVED (fail-closed, không map điểm). Địa chỉ không tồn tại rơi vào nhánh này.
+
+## Phán trên bằng chứng một phần (thêm 14/9, user duyệt)
+
+Blockscout bị Cloudflare chặn theo đợt. Khi Blockscout KHÔNG đọc được nhưng GeckoTerminal có pool thật:
+- `Facts.holder_evidence = false`, contract vẫn ra verdict.
+- Cộng `+20` với cờ "Holder and source-verification evidence unavailable (Blockscout unreachable)" - bằng đúng mức `is_verified == false`, vì verify chính là thứ không xác minh được. Cờ này thay cho cờ "chưa verify".
+- Bỏ qua mọi cờ dựa trên holder: `top_holder_percent`, `top10_percent`, `holders_count < 50`, và cả cờ xanh `whale_holder_count`. Không cho token hưởng điểm tốt từ bằng chứng không có.
+- Tầng AI cũng đọc source từ Blockscout nên sẽ `observed = false`; không có cờ AI nào được cộng.
+- Đánh đổi đã biết: thiếu cờ `holders_count < 50` (+10), nên một token pool cũ, thanh khoản tốt có thể ra SAFE chỉ với 20 điểm dù chưa được soi holder. UI hiện rõ "Unavailable" ở các dòng holder để người đọc biết.
 
 ## Đầu ra lưu on-chain
 

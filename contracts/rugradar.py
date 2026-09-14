@@ -41,6 +41,7 @@ Respond only in this exact JSON format, nothing else, no markdown, no explanatio
 class Facts:
     # Quan sat KHACH QUAN (khong qua AI). resolved=False nghia la fail-closed.
     resolved: bool
+    holder_evidence: bool  # False = Blockscout khong doc duoc: so holder/verify la KHONG RO, khong phai 0
     token_name: str
     token_symbol: str
     holders_count: u256
@@ -116,7 +117,7 @@ class RugRadar(gl.Contract):
                     sort_keys=True,
                 )
             except Exception as e:
-                return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
+                return json.dumps({"ok": False, "error": "unavailable"}, sort_keys=True)
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
@@ -151,7 +152,7 @@ class RugRadar(gl.Contract):
                     sort_keys=True,
                 )
             except Exception as e:
-                return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
+                return json.dumps({"ok": False, "error": "unavailable"}, sort_keys=True)
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
@@ -182,7 +183,7 @@ class RugRadar(gl.Contract):
                     sort_keys=True,
                 )
             except Exception as e:
-                return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
+                return json.dumps({"ok": False, "error": "unavailable"}, sort_keys=True)
 
         return json.loads(gl.eq_principle.strict_eq(fetch))
 
@@ -194,11 +195,18 @@ class RugRadar(gl.Contract):
         address_info = self._fetch_address_info(token_address)
         pool_info = self._fetch_pool(token_address)
 
-        core_ok = address_info.get("ok", False) and pool_info.get("ok", False)
+        blockscout_ok = address_info.get("ok", False)
+        pool_ok = pool_info.get("ok", False)
+        has_pool = pool_ok and pool_info.get("has_pool", False)
 
-        if not core_ok:  # fail-closed: thieu du lieu loi thi khong doan bua
+        # Blockscout bi Cloudflare chan theo dot. Neu GeckoTerminal van cho thay 1 pool
+        # that thi van phan tren bang chung thi truong, va compute_verdict cong co rieng
+        # cho phan holder/verify khong kiem chung duoc. Khong co pool lan Blockscout thi
+        # khong con bang chung nao -> fail-closed (dia chi khong ton tai roi vao day).
+        if not pool_ok or (not blockscout_ok and not has_pool):
             self.facts[key] = Facts(
                 resolved=False,
+                holder_evidence=False,
                 token_name="",
                 token_symbol="",
                 holders_count=0,
@@ -218,9 +226,8 @@ class RugRadar(gl.Contract):
             return
 
         total_supply_raw = int(address_info.get("total_supply") or 0)
-        holders_info = self._fetch_holders(token_address, total_supply_raw)
+        holders_info = self._fetch_holders(token_address, total_supply_raw) if blockscout_ok else {"ok": False}
 
-        has_pool = pool_info.get("has_pool", False)
         pool_age_hours = 0
         if has_pool and pool_info.get("pool_created_at"):
             created_at = datetime.fromisoformat(
@@ -241,6 +248,7 @@ class RugRadar(gl.Contract):
 
         self.facts[key] = Facts(
             resolved=True,
+            holder_evidence=blockscout_ok,
             token_name=str(address_info.get("name") or ""),
             token_symbol=str(address_info.get("symbol") or ""),
             holders_count=int(address_info.get("holders_count") or 0),
@@ -289,7 +297,7 @@ class RugRadar(gl.Contract):
                     sort_keys=True,
                 )
             except Exception as e:
-                return json.dumps({"ok": False, "error": f"{type(e).__name__}: {e}"}, sort_keys=True)
+                return json.dumps({"ok": False, "error": "unavailable"}, sort_keys=True)
 
         # prompt_comparative chu KHONG strict_eq: moi validator chay 1 model LLM
         # khac nhau nen output khong bao gio byte-giong-het-nhau (da kiem chung
@@ -337,7 +345,7 @@ class RugRadar(gl.Contract):
     def compute_verdict(self, token_address: str) -> None:
         key = _normalize_address(token_address)
         default_facts = Facts(
-            resolved=False, token_name="", token_symbol="", holders_count=0,
+            resolved=False, holder_evidence=False, token_name="", token_symbol="", holders_count=0,
             top_holder_percent=0, top10_percent=0, whale_holder_count=0,
             is_verified=False, has_pool=False, price_usd="0", market_cap_usd="0",
             reserve_in_usd="0", volume_24h_usd="0",
@@ -363,7 +371,10 @@ class RugRadar(gl.Contract):
         risk = 0
         flags = []
 
-        if not facts.is_verified:
+        if not facts.holder_evidence:
+            risk += 20
+            flags.append("Holder and source-verification evidence unavailable (Blockscout unreachable)")
+        elif not facts.is_verified:
             risk += 20
             flags.append("Source code has not been verified")
         if obs.has_mint:
@@ -382,18 +393,18 @@ class RugRadar(gl.Contract):
             risk += 10
             flags.append("Contract is a proxy; the executed code can be swapped later")
 
-        if facts.top_holder_percent > 50:
+        if facts.holder_evidence and facts.top_holder_percent > 50:
             risk += 20
             flags.append("The largest individual wallet holds over 50% of supply")
-        elif facts.top_holder_percent > 30:
+        elif facts.holder_evidence and facts.top_holder_percent > 30:
             risk += 10
             flags.append("The largest individual wallet holds over 30% of supply")
 
-        if facts.top10_percent > 50:
+        if facts.holder_evidence and facts.top10_percent > 50:
             risk += 10
             flags.append("The top 10 individual wallets hold over 50% of supply combined")
 
-        if facts.holders_count < 50:
+        if facts.holder_evidence and facts.holders_count < 50:
             risk += 10
             flags.append("Fewer than 50 wallets hold this token")
 
@@ -414,10 +425,10 @@ class RugRadar(gl.Contract):
             risk += 20
             flags.append("Many buys but zero sells in the last 24h (suspected honeypot)")
 
-        if facts.whale_holder_count >= 3:
+        if facts.holder_evidence and facts.whale_holder_count >= 3:
             risk -= 15
             flags.append("Three or more independent large holders (healthy distribution)")
-        elif facts.whale_holder_count >= 1:
+        elif facts.holder_evidence and facts.whale_holder_count >= 1:
             risk -= 8
             flags.append("At least one independent large holder")
 

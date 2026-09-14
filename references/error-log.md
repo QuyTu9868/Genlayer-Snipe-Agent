@@ -276,3 +276,24 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   khung gio nay; studionet la moi truong duy nhat chay on dinh de demo.
 - **Mau lap lai tren ca 2 testnet:** khi 1 tx toi contract con treo, tx tiep
   theo tu cung vi bi revert luc gui. Frontend gui 3 tx noi tiep nen se dinh.
+
+### 23. Phan tren bang chung mot phan khi Blockscout bi chan (user duyet 14/9)
+- **Van de goc:** Blockscout bi Cloudflare chan theo dot (HTTP 403, trang
+  "Just a moment..."), contract fail-closed ve UNRESOLVED ca khi GeckoTerminal
+  van doc duoc pool that. Ban an phu thuoc viec Blockscout co mo cua hay khong.
+- **Phat hien them:** Cloudflare chan THEO IP. Cung luc may dev nhan 403 thi
+  validator studionet van doc duoc Blockscout (UNFUCK ra SAFE voi du bang
+  chung). Canh Blockscout tu IP cua minh KHONG dai dien cho validator.
+- **Cach sua:** `Facts.holder_evidence`. Blockscout khong doc duoc NHUNG
+  GeckoTerminal co pool -> van ra verdict, +20 co "Holder and
+  source-verification evidence unavailable", bo qua moi co dua tren holder
+  (ke ca co xanh). Khong co pool lan Blockscout -> van UNRESOLVED. Loi fetch
+  chuan hoa ve chuoi co dinh "unavailable" de validator gap loi khac chu van
+  dong thuan. Chi tiet: `scoring-spec.md` muc "Phan tren bang chung mot phan".
+- **Kiem chung that tren studionet:** (1) dia chi bia -> UNRESOLVED, fail-closed
+  giu nguyen; (2) ban sao contract chi doi `BLOCKSCOUT_BASE` sang URL tra HTML
+  -> `holder_evidence=false`, verdict SUSPICIOUS 30 = 20 + 10 (pool < 24h).
+- **Hanh vi da biet:** khi Blockscout chan, `observe_token` ket thuc o trang
+  thai undetermined (giam khao LLM cua prompt_comparative) nen khong ghi
+  Observations. Verdict khong anh huong (coi nhu AI chua quan sat), UI an
+  khoi loi khai AI.

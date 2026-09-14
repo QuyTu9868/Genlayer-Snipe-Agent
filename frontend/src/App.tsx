@@ -145,10 +145,7 @@ export default function App() {
 
         <div className="mt-10">
           {view.kind === "checking" && (
-            <div className="space-y-4">
-              <p className="text-sm text-ink-muted">Checking the record...</p>
-              <MarketPanel tokenAddress={view.tokenAddress} />
-            </div>
+            <p className="text-sm text-ink-muted">Checking the record...</p>
           )}
 
           {view.kind === "not_found" && (
@@ -201,7 +198,6 @@ export default function App() {
               ) : (
                 <p className="text-xs text-ink-muted">Preliminary hearing on one node...</p>
               )}
-              <MarketPanel tokenAddress={view.tokenAddress} />
             </div>
           )}
 
@@ -213,13 +209,18 @@ export default function App() {
                 facts={view.facts}
                 observations={view.observations}
               />
-              <MarketPanel tokenAddress={view.tokenAddress} />
               <button
                 onClick={() => handleScan(view.tokenAddress)}
                 className="text-xs text-ink-muted underline decoration-border-soft underline-offset-4 hover:text-ink"
               >
                 Request a new hearing (re-scan with current data)
               </button>
+            </div>
+          )}
+
+          {"tokenAddress" in view && (
+            <div className="mt-4">
+              <MarketPanel key={view.tokenAddress} tokenAddress={view.tokenAddress} />
             </div>
           )}
 

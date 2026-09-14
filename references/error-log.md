@@ -297,3 +297,24 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   thai undetermined (giam khao LLM cua prompt_comparative) nen khong ghi
   Observations. Verdict khong anh huong (coi nhu AI chua quan sat), UI an
   khoi loi khai AI.
+
+### 24. Top 10 holder lech GMGN: vi dot bi tinh la nguoi, vi thong minh bi loai oan
+- **Trieu chung:** token 富贵 `0xceebf25b318201f1f949be2fabbfcee231737139`
+  contract ra top 10 = 20%, GMGN = 14.26%.
+- **Dao nguoc cach GMGN tinh:** lay top holder cua GMGN, bo dia chi dot (10.76%),
+  pool `0xec52` (5.37%) va "sandwich_bot" `0x8366` (3.15%) thi 10 vi con lai cong
+  ra dung 14.26%. "sandwich_bot" thuc ra la PoolManager cua Uniswap V4
+  (GMGN `addr_type=2` = pool).
+- **Nguyen nhan goc (2 loi nguoc chieu):**
+  1. `0x...dead` khong phai contract nen bi tinh la "vi ca nhan lon nhat" (10%).
+  2. Bo dia chi dot xong thi ra 10%, THAP hon GMGN. Do Blockscout qua 1 contract
+     do tren studionet (may dev bi Cloudflare chan): Blockscout gan
+     `is_contract=true` cho vi thong minh cua nguoi that, `proxy_type` =
+     `eip7702` hoac `erc7760`. 7/15 top holder bi loai oan vi vay.
+- **Cach sua:** `_is_person()`: bo dia chi dot, bo contract, NHUNG giu contract co
+  proxy kieu vi thong minh. Sau sua: top 10 = 14% (GMGN 14.26%), so vi lon doc
+  lap 6 -> 13. Contract `0x3035D639c3d7af963E3d50d80496Ba0677d22AEa`.
+- **Khong phai loi (de nguyen, chi doi nhan):** tuoi pool on-chain 61 ngay vs GMGN
+  5 ngay. GMGN hien `open_timestamp` (luc token tot nghiep launchpad Pons, mo giao
+  dich); pool thi duoc tao san tu 61 ngay truoc. Moc mo giao dich chi GMGN co. UI
+  doi nhan on-chain thanh "Pool created", khoi Market data dung `open_timestamp`.

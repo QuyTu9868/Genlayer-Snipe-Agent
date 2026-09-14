@@ -87,7 +87,7 @@ export function VerdictCard({
                   Liq <span className="font-mono text-ink">${formatCompactUsd(facts.reserve_in_usd)}</span>
                 </span>
                 <span className="text-ink-muted">
-                  Age <span className="font-mono text-ink">{formatAge(facts.pool_age_hours)}</span>
+                  Pool <span className="font-mono text-ink">{formatAge(facts.pool_age_hours)}</span>
                 </span>
               </div>
             )}
@@ -129,7 +129,7 @@ export function VerdictCard({
                     <Fact label="Market cap" value={`$${formatUsd(facts.market_cap_usd)}`} />
                     <Fact label="24h volume" value={`$${formatUsd(facts.volume_24h_usd)}`} />
                     <Fact label="24h buys / sells" value={`${facts.buys_24h} / ${facts.sells_24h}`} />
-                    <Fact label="Pool age" value={formatAge(facts.pool_age_hours)} />
+                    <Fact label="Pool created" value={`${formatAge(facts.pool_age_hours)} ago`} />
                   </>
                 )}
               </div>

@@ -110,7 +110,9 @@ export async function getMarketData(tokenAddress: string): Promise<MarketData> {
     sells24h: num(price.sells_24h),
     holderCount: num(info.holder_count),
     totalSupply,
-    createdAt: num(info.creation_timestamp),
+    // GMGN hien tuoi tinh tu luc MO GIAO DICH (open_timestamp, vd token tot nghiep
+    // launchpad), khong phai luc tao contract. Token chua mo thi moi lui ve creation.
+    createdAt: num(info.open_timestamp) || num(info.creation_timestamp),
     security,
   };
 }

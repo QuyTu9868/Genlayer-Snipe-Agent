@@ -48,6 +48,14 @@ Chặn biên: `risk = max(0, min(100, risk))`.
 - `risk > 60` -> SCAM
 - Không đọc được GeckoTerminal, HOẶC không có pool mà cũng không đọc được Blockscout -> UNRESOLVED (fail-closed, không map điểm). Địa chỉ không tồn tại rơi vào nhánh này.
 
+## Ai được tính là holder (khớp GMGN, thêm 14/9)
+
+`top_holder_percent`, `top10_percent`, `whale_holder_count` chỉ tính ví của NGƯỜI, lấy từ trang holders của Blockscout:
+- Bỏ địa chỉ đốt `0x...dead` và `0x000...0` (token đã huỷ, không ai nắm giữ).
+- Bỏ contract thật: pool AMM (`UniswapV3Pool`, `PoolManager` của Uniswap V4...).
+- GIỮ contract có `proxy_type` là `eip7702` hoặc `erc7760`: đây là ví thông minh của người thật, Blockscout gắn `is_contract=true` nhưng GMGN coi là người (`addr_type=0`).
+- Kiểm chứng với token 富贵 `0xceeb...7139`: contract ra top 10 = 14%, GMGN = 14.26%.
+
 ## Phán trên bằng chứng một phần (thêm 14/9, user duyệt)
 
 Blockscout bị Cloudflare chặn theo đợt. Khi Blockscout KHÔNG đọc được nhưng GeckoTerminal có pool thật:

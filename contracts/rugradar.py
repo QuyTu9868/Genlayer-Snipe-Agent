@@ -9,6 +9,27 @@ GECKOTERMINAL_BASE = "https://api.geckoterminal.com/api/v2/networks/robinhood"
 
 MAX_SOURCE_CHARS = 8000  # gioi han source code dua vao prompt
 
+# Dia chi dot token: token gui vao day la bi huy vinh vien, khong phai nguoi nam giu.
+# Khong phai contract nen truoc day bi tinh nham la "vi ca nhan lon nhat".
+BURN_ADDRESSES = (
+    "0x000000000000000000000000000000000000dead",
+    "0x0000000000000000000000000000000000000000",
+)
+
+# Blockscout gan is_contract=true cho VI THONG MINH cua nguoi that: EOA uy quyen
+# code theo EIP-7702, va vi proxy toi gian ERC-7760. GMGN coi chung la nguoi
+# (addr_type=0). Loai chung ra lam top 10 cua token 富贵 lech 10% vs 14.26% GMGN.
+SMART_WALLET_PROXIES = ("eip7702", "erc7760")
+
+
+def _is_person(address: dict) -> bool:
+    # Nguoi = khong phai dia chi dot, va (khong phai contract HOAC la vi thong minh)
+    if str(address.get("hash", "")).lower() in BURN_ADDRESSES:
+        return False
+    if not address.get("is_contract", False):
+        return True
+    return address.get("proxy_type") in SMART_WALLET_PROXIES
+
 
 def _normalize_address(token_address) -> str:
     # Mot so client (vd genlayer CLI) tu suy luan chuoi hex 40 ky tu thanh kieu
@@ -129,10 +150,10 @@ class RugRadar(gl.Contract):
                 web_data = gl.nondet.web.render(url, mode="text")
                 data = json.loads(web_data)
                 items = data.get("items", [])
-                eoa_values = [  # chi vi CA NHAN, bo contract/pool AMM ra
+                eoa_values = [  # vi cua NGUOI: bo pool/contract that va dia chi dot
                     int(item["value"])
                     for item in items
-                    if not item.get("address", {}).get("is_contract", False)
+                    if _is_person(item.get("address") or {})
                 ]
                 eoa_values.sort(reverse=True)
                 top_percent = 0

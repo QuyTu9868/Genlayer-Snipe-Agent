@@ -299,6 +299,14 @@ class RugRadar(gl.Contract):
         )
         return self._score(self._gather_facts(_normalize_address(token_address), now_iso), no_testimony)
 
+    @gl.public.write
+    def preview_facts(self, token_address: str, now_iso: str) -> Facts:
+        # SO THAM chi lay Facts (MC, gia, thanh khoan, holder...), KHONG cham diem.
+        # Dung khi da co ban an chinh thuc roi nhung nguoi xem bam "Check the record"
+        # lai va muon thay so MOI NHAT thay vi so dong bang tu lan quet truoc. Cung 1
+        # co che 1 node nhu preview_token, chi khac cho ve Facts thay vi Verdict.
+        return self._gather_facts(_normalize_address(token_address), now_iso)
+
     @gl.public.view
     def get_facts(self, token_address: str) -> Facts:
         return self.facts[_normalize_address(token_address)]

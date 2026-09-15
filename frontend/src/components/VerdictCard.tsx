@@ -56,11 +56,13 @@ export function VerdictCard({
   tokenAddress,
   verdict,
   facts,
+  factsAsOf,
   observations,
 }: {
   tokenAddress: string;
   verdict: Verdict;
   facts: Facts | null;
+  factsAsOf: Date | null; // null = so da luu tren chain tu lan quet truoc, khong phai so vua doc
   observations: Observations | null;
 }) {
   const [market, setMarket] = useState<MarketData | null>(null);
@@ -160,7 +162,15 @@ export function VerdictCard({
 
           {facts && (
             <div className="mt-8">
-              <p className="text-xs uppercase tracking-widest text-ink-muted">On-chain record</p>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <p className="text-xs uppercase tracking-widest text-ink-muted">On-chain record</p>
+                {/* factsAsOf null = day la so da luu tu lan quet truoc, khong phai so vua doc lai */}
+                <p className="text-xs text-ink-muted">
+                  {factsAsOf
+                    ? `Live reading as of ${factsAsOf.toLocaleTimeString("en-US")}`
+                    : "From the last completed scan"}
+                </p>
+              </div>
               <div className="mt-3 sm:grid sm:grid-cols-2 sm:gap-x-8">
                 {/* Blockscout khong doc duoc luc scan: hien "Unavailable" thay vi so 0 gay hieu nham */}
                 <Fact label="Source verified" value={facts.holder_evidence ? (facts.is_verified ? "Yes" : "No") : "Unavailable"} />

@@ -5,6 +5,7 @@ import {
   getObservations,
   getVerdict,
   isValidAddress,
+  previewFacts,
   previewVerdict,
   runFullScan,
   type Facts,
@@ -20,7 +21,14 @@ type ViewState =
   | { kind: "idle" }
   | { kind: "checking"; tokenAddress: string }
   | { kind: "not_found"; tokenAddress: string }
-  | { kind: "verdict"; tokenAddress: string; verdict: Verdict; facts: Facts | null; observations: Observations | null }
+  | {
+      kind: "verdict";
+      tokenAddress: string;
+      verdict: Verdict;
+      facts: Facts | null;
+      factsAsOf: Date | null; // gio doc Facts nay, de UI ghi ro "as of" thay vi im lang coi la moi
+      observations: Observations | null;
+    }
   | { kind: "scanning"; tokenAddress: string; step: ScanStep; preview: Verdict | null }
   | { kind: "error"; message: string };
 
@@ -60,11 +68,20 @@ export default function App() {
         handleScan(tokenAddress, preview);
         return;
       }
-      const [facts, observations] = await Promise.all([
-        getFacts(tokenAddress),
+      // Ho so DA co roi, nhung diem/flags/badge van la ban an chinh thuc (da dong thuan),
+      // chi rieng cac con so Facts (MC, gia, holder...) duoc lam MOI moi lan bam check,
+      // thay vi dong bang tu lan quet truoc do - dung 1 node, vai giay, khong ghi chain.
+      const [observations, freshFacts] = await Promise.all([
         getObservations(tokenAddress),
+        previewFacts(tokenAddress),
       ]);
-      setView({ kind: "verdict", tokenAddress, verdict, facts, observations });
+      let facts = freshFacts;
+      let factsAsOf: Date | null = new Date();
+      if (!facts) {
+        facts = await getFacts(tokenAddress); // so tham loi thi lui ve so da luu tren chain
+        factsAsOf = null;
+      }
+      setView({ kind: "verdict", tokenAddress, verdict, facts, factsAsOf, observations });
     } catch {
       setView({ kind: "error", message: "Could not reach the RugRadar contract. Check your connection and try again." });
     }
@@ -100,7 +117,8 @@ export default function App() {
         getFacts(tokenAddress),
         getObservations(tokenAddress),
       ]);
-      setView({ kind: "verdict", tokenAddress, verdict, facts, observations });
+      // Vua quet xong nen Facts nay chinh la so moi nhat, danh dau thoi diem ngay bay gio
+      setView({ kind: "verdict", tokenAddress, verdict, facts, factsAsOf: new Date(), observations });
     } catch (err) {
       setView({
         kind: "error",
@@ -208,6 +226,7 @@ export default function App() {
                 tokenAddress={view.tokenAddress}
                 verdict={view.verdict}
                 facts={view.facts}
+                factsAsOf={view.factsAsOf}
                 observations={view.observations}
               />
               <button

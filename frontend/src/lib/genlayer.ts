@@ -4,7 +4,7 @@ import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar tren GenLayer Studionet. Chuyen tu Asimov sang
 // vi ca Asimov lan Bradbury nghen tang xu ly giao dich (error-log muc 20, 22).
-export const CONTRACT_ADDRESS = "0xd92B92E377244D4508ad4eff2e115035dD8AC7FC" as const;
+export const CONTRACT_ADDRESS = "0x36A0a2469473cEc4f2573DA07F386092F58FE8c7" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
@@ -214,6 +214,28 @@ export async function previewVerdict(tokenAddress: string): Promise<Verdict | nu
     // ket qua ve dang Map, doi sang object thuong cho normalizeVerdict
     const record = raw instanceof Map ? Object.fromEntries(raw) : (raw as Record<string, unknown>);
     return { ...normalizeVerdict(record), observed_at: now };
+  } catch {
+    return null;
+  }
+}
+
+// previewFacts: giong previewVerdict nhung tra Facts (MC, gia, holder...) thay vi Verdict.
+// Dung khi DA CO ban an chinh thuc roi ma nguoi xem van muon so MOI NHAT: diem/flags giu
+// nguyen tu ban an da dong thuan, chi rieng cac con so nay duoc lam tuoi moi lan check.
+export async function previewFacts(tokenAddress: string): Promise<Facts | null> {
+  const client = getClient();
+  try {
+    const raw = await withTimeout(
+      client.simulateWriteContract({
+        address: CONTRACT_ADDRESS,
+        functionName: "preview_facts",
+        args: [tokenAddress, new Date().toISOString()],
+        leaderOnly: true,
+      }),
+      PREVIEW_TIMEOUT_MS,
+    );
+    const record = raw instanceof Map ? Object.fromEntries(raw) : (raw as Record<string, unknown>);
+    return normalizeFacts(record);
   } catch {
     return null;
   }

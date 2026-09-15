@@ -381,3 +381,42 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
 - **Kiem chung:** chup man hinh that ca light/dark (1440px) va di dong (390px,
   khong tran ngang), xac nhan logo hien dung, khong con trung du lieu giua 2
   khu vuc, nut CTA tuong phan tot ca 2 theme.
+
+### 28. "Check the record" khong lam moi Facts, chi doc lai ban an cu (15/9)
+- **Phan hoi:** bam "Check the record" nhieu lan nhung Market cap van dung yen,
+  du gmgn.ai cho thay gia da doi. Nghi la loi dong bo.
+- **Chan doan lai (lan truoc do sai lop):** lan truoc toi chi kiem tra "app co
+  goi lai GMGN khong" (co) nhung do KHONG PHAI so nguoi dung dang nhin. So MC
+  ho dang so la o khoi "On-chain record", va so do doc tu `get_verdict` - 1 VIEW
+  CALL doc thang state da luu, KHONG quet lai gi ca. No chi doi khi co ai bam
+  "Request a new hearing" (quet lai that, ~1 phut). Bam "Check the record" lai
+  bao nhieu lan cung ra dung 1 so do.
+- **Cach sua:** them `preview_facts(token_address, now_iso)` ben canh
+  `preview_token` da co - dung lai `_gather_facts`, tra Facts tuoi qua 1 node
+  (simulateWriteContract, leaderOnly, ~5-7s), KHONG dong thuan, KHONG ghi chain.
+  Moi lan "Check the record" (ke ca khi da co ban an), frontend goi ham nay de
+  lam moi MC/gia/holder/pool hien thi, con diem so/flags/badge VAN la ban an da
+  dong thuan (khong the "song" tung giay vi can nhieu validator dong y). The
+  hien ro "Live reading as of HH:MM:SS" canh "On-chain record", tach biet voi
+  dong "Ruled on ..." (thoi diem ban an chinh thuc) o cuoi the.
+- **Kiem chung that:** SHIB-clone (top10 74%), bam check 2 lan cach nhau vai
+  giay, ca 2 lan deu hien "Live reading as of ..." (khong con dong bang tu lan
+  quet dau). Contract moi `0x36A0a2469473cEc4f2573DA07F386092F58FE8c7`.
+
+### 29. Nghi risk_score = 0 qua nhieu la de hieu, nhung khong phai luon sai
+- **Phan hoi:** thang diem 0-100 ma token nao cung ra gan 0, nhin nhu vo dung.
+- **Tra cuu chuan nganh:** RugCheck, GoPlus, TokenSniffer, va chinh GMGN deu coi
+  LP khoa/dot va % dev con giu la tin hieu nang, ngang hoac hon ca phan bo
+  holder - hai thu RugRadar chua kiem. Day la lo hong that.
+- **Nhung kiem thu that lai cho ket qua khac:** tra du lieu LP-lock/dev-holdings
+  that cua GMGN cho dung con token dang bi nghi (SWARM) thi CUNG sach: 95% LP
+  gui vao dia chi dot, dev giu 0%, `flags: []` tu chinh GMGN. Tuc voi RIENG con
+  nay, nghi ngo la sai - du liem sat ca tieu chuan day du van ra thap.
+- **Chung minh thang diem CO phan biet duoc:** loc 60 token moi nhat tren
+  Robinhood qua GMGN rank, tim duoc SHIB-clone `top_10_holder_rate = 74%`.
+  Quet qua RugRadar ra **risk_score = 22** (khac han 0), voi 3 co do that:
+  vi lon nhat >50%, top 10 >50%, kem theo co xanh. Xac nhan thang diem hoat
+  dong dung khi co bang chung that, khong phai luon tra ve 0.
+- **Ket luan:** giu nguyen cong thuc cham diem hien tai, khong sua vi 2 ly do
+  tren da du chung minh no hoat dong dung. Lo hong LP-lock/dev-holdings van
+  con that su nhung khong doi ket qua cua cac token da test hom nay.

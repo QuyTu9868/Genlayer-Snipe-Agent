@@ -10,7 +10,7 @@ rulebook, and code alone renders the verdict: **SAFE**, **SUSPICIOUS**, or
 Built for the GenLayer Agent Tank Hackathon, Onchain Justice theme.
 
 **Live contract (GenLayer Studionet):**
-[`0xd92B92E377244D4508ad4eff2e115035dD8AC7FC`](https://explorer-studio.genlayer.com/address/0xd92B92E377244D4508ad4eff2e115035dD8AC7FC)
+[`0x36A0a2469473cEc4f2573DA07F386092F58FE8c7`](https://explorer-studio.genlayer.com/address/0x36A0a2469473cEc4f2573DA07F386092F58FE8c7)
 
 Also deployed to the public GenLayer Bradbury Testnet:
 [`0xe297716bA5Aab8672539D97d646e8010EcCCc6Da`](https://explorer-bradbury.genlayer.com/address/0xe297716bA5Aab8672539D97d646e8010EcCCc6Da)

@@ -13,8 +13,8 @@ import {
   type Verdict,
 } from "./lib/genlayer";
 import { VerdictCard } from "./components/VerdictCard";
-import { MarketPanel } from "./components/MarketPanel";
 import { PreliminaryCard } from "./components/PreliminaryCard";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 type ViewState =
   | { kind: "idle" }
@@ -114,7 +114,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-3xl px-6 py-16 sm:py-24">
+      <ThemeToggle />
+      <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
         <header className="mb-16">
           <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">RugRadar</p>
           <h1 className="mt-3 font-serif text-4xl tracking-tight text-ink sm:text-5xl">
@@ -137,7 +138,7 @@ export default function App() {
           />
           <button
             type="submit"
-            className="shrink-0 rounded-md bg-ink px-6 py-3 text-sm font-medium text-white transition hover:bg-[#333333] active:scale-[0.98]"
+            className="shrink-0 rounded-md bg-accent px-6 py-3 text-sm font-medium text-on-accent transition hover:opacity-90 active:scale-[0.98]"
           >
             Check the record
           </button>
@@ -157,7 +158,7 @@ export default function App() {
               </p>
               <button
                 onClick={() => handleScan(view.tokenAddress)}
-                className="mt-5 rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#333333] active:scale-[0.98]"
+                className="mt-5 rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-on-accent transition hover:opacity-90 active:scale-[0.98]"
               >
                 Open a case
               </button>
@@ -215,12 +216,6 @@ export default function App() {
               >
                 Request a new hearing (re-scan with current data)
               </button>
-            </div>
-          )}
-
-          {"tokenAddress" in view && (
-            <div className="mt-4">
-              <MarketPanel key={view.tokenAddress} tokenAddress={view.tokenAddress} />
             </div>
           )}
 

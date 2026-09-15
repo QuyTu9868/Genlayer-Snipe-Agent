@@ -358,3 +358,26 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   Trading opened (open_timestamp, khac "Pool created" tren on-chain la luc TAO pool),
   Buy/sell tax, Honeypot, Open source, Blacklist, Renounced. Bo han cac Stat
   MC/Liq/Price/Holders/volume/buys-sells/Top10 khoi khoi nay.
+
+### 27. Lam gon giao dien theo phan hoi nguoi dung (15/9)
+- **Phan hoi:** Market context tach rieng 1 the ben duoi nhin "lac que" voi
+  On-chain record; logo qua nho; UI chi chiem ~50% chieu ngang man hinh; can
+  dark mode.
+- **Gop the:** xoa han component `MarketPanel.tsx`. Logic doc GMGN va toan bo
+  phan hien thi (logo, "Trading opened", tax, honeypot, open source, blacklist,
+  renounced) chuyen vao thang trong `VerdictCard`, hien o cuoi CUNG 1 the,
+  ngan cach bang 1 duong ke - khong con the roi rac.
+- **Logo:** to hon (64px, 80px o man rong), hinh vuong `rounded-xl` (khong con
+  tron `rounded-full`), dat dau the canh ten token.
+- **Rong hon:** container App.tsx tu `max-w-3xl` (768px) len `max-w-6xl`
+  (1152px). Fact list (On-chain record, Source code testimony) chuyen sang
+  luoi 2 cot tu breakpoint `sm` de dung het chieu rong, van 1 cot o dien thoai.
+- **Dark mode:** Tailwind v4 dung `@custom-variant dark (&:where(.dark, .dark *))`
+  thay vi theo `prefers-color-scheme` mac dinh, de nut bam o goc tren-phai chu
+  dong duoc chu khong bi he dieu hanh ghi de. Luu lua chon vao localStorage.
+  Tach rieng token mau `--color-accent`/`--color-on-accent` cho nut CTA thay vi
+  dung chung `--color-ink` (`ink` doi vai tro sang/toi giua 2 theme, dung chung
+  se lam nut CTA mat tuong phan o 1 trong 2 theme).
+- **Kiem chung:** chup man hinh that ca light/dark (1440px) va di dong (390px,
+  khong tran ngang), xac nhan logo hien dung, khong con trung du lieu giua 2
+  khu vuc, nut CTA tuong phan tot ca 2 theme.

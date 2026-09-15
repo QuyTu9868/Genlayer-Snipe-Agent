@@ -338,3 +338,23 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   van dung gio giao dich (deterministic).
 - **Sau sua:** so tham token 富贵 ra SAFE 0 voi dung co "Three or more independent large
   holders", TRUNG ban an dong thuan. Contract `0xd92B92E377244D4508ad4eff2e115035dD8AC7FC`.
+
+### 26. UI: logo bi chan, va khoi Market context lap toan bo On-chain record
+- **Trieu chung (nguoi dung bao):** thieu logo token trong khoi Market context;
+  On-chain record va Market context hien gan nhu CUNG 1 noi dung (MC, Liq, Price,
+  Holders, volume, buys/sells, Top10 deu co o ca 2 khoi).
+- **Logo - nguyen nhan:** gmgn.ai gan header `Cross-Origin-Resource-Policy: same-origin`
+  cho anh, trinh duyet tu choi tai (`NotSameOrigin`), da tat han logo o muc 25.
+- **Logo - cach sua:** `images.weserv.nl`, proxy anh cong khai, tai ho o phia server
+  roi tra lai voi `Cross-Origin-Resource-Policy: cross-origin` va
+  `Access-Control-Allow-Origin: *` - da kiem tra song (HTTP 200, header dung) truoc
+  khi dung. Luu y khi tu kiem tra: chup man hinh QUA SOM se thay "khong co logo" du
+  code dung, vi <img> tai bat dong bo; phai cho `img.complete === true` moi ket luan.
+- **Trung lap - nguyen nhan:** thiet ke ban dau muon 2 khoi doc lap de doi chieu,
+  nhung hien thi toan bo so lieu GMGN thay vi chi phan khac biet, nen nhin nhu lap.
+  Toan bo grid (MC/Liq/Price/Holders/volume/buys-sells/Top10) trung 1-1 voi
+  On-chain record; chi Honeypot/Open source/Blacklist/Renounced/tax la rieng GMGN.
+- **Cach sua:** Market context CHI con hien nhung gi GMGN co ma on-chain khong co:
+  Trading opened (open_timestamp, khac "Pool created" tren on-chain la luc TAO pool),
+  Buy/sell tax, Honeypot, Open source, Blacklist, Renounced. Bo han cac Stat
+  MC/Liq/Price/Holders/volume/buys-sells/Top10 khoi khoi nay.

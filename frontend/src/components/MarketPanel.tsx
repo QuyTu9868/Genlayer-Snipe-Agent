@@ -1,19 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMarketData, isGmgnConfigured, type MarketData } from "../lib/gmgn";
 
-function compactUsd(value: number): string {
-  if (!Number.isFinite(value) || value === 0) return "-";
-  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(2)}K`;
-  return `$${value.toFixed(2)}`;
-}
-
-function price(value: number): string {
-  if (!Number.isFinite(value) || value === 0) return "-";
-  if (value >= 1) return `$${value.toFixed(4)}`;
-  return `$${value.toPrecision(4)}`;
-}
-
 // age: doi unix giay thanh chuoi ngan (12m / 6h / 3d)
 function age(createdAt: number): string {
   if (!createdAt) return "-";
@@ -22,15 +9,6 @@ function age(createdAt: number): string {
   if (mins < 60) return `${mins}m`;
   if (mins < 60 * 48) return `${Math.floor(mins / 60)}h`;
   return `${Math.floor(mins / 1440)}d`;
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-widest text-ink-muted">{label}</p>
-      <p className="mt-1 font-mono text-sm text-ink">{value}</p>
-    </div>
-  );
 }
 
 export function MarketPanel({ tokenAddress }: { tokenAddress: string }) {
@@ -70,7 +48,19 @@ export function MarketPanel({ tokenAddress }: { tokenAddress: string }) {
     <div className="rounded-xl border border-border-soft bg-surface p-6 sm:p-8">
       <div className="flex items-start justify-between gap-4 border-b border-border-soft pb-4">
         <div className="flex items-center gap-3">
-          {/* Khong hien logo: gmgn.ai chan nhung anh tu trang khac (CORP NotSameOrigin) */}
+          {/* gmgn.ai gan Cross-Origin-Resource-Policy: same-origin nen tai thang bi
+              chan (loi NotSameOrigin). images.weserv.nl la proxy anh cong khai, tai ho
+              o phia server roi tra lai voi CORP: cross-origin - da kiem tra song. */}
+          {data.logo && (
+            <img
+              src={`https://images.weserv.nl/?url=${encodeURIComponent(data.logo)}`}
+              alt=""
+              className="h-9 w-9 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          )}
           <div>
             <p className="text-xs uppercase tracking-widest text-ink-muted">Market context</p>
             <p className="font-serif text-lg text-ink">
@@ -82,45 +72,40 @@ export function MarketPanel({ tokenAddress }: { tokenAddress: string }) {
         <p className="text-xs text-ink-muted">Source: GMGN</p>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-        <Stat label="Market cap" value={compactUsd(data.marketCapUsd)} />
-        <Stat label="Liquidity" value={compactUsd(data.liquidityUsd) + (data.quoteSymbol ? ` (${data.quoteSymbol})` : "")} />
-        <Stat label="24h volume" value={compactUsd(data.volume24hUsd)} />
-        <Stat label="Age" value={age(data.createdAt)} />
-        <Stat label="Price" value={price(data.priceUsd)} />
-        <Stat label="Holders" value={data.holderCount.toLocaleString("en-US")} />
-        <Stat label="24h buys / sells" value={`${data.buys24h} / ${data.sells24h}`} />
+      {/* CHI hien nhung gi GMGN co ma on-chain record o tren KHONG co (dung 2 nguon
+          khac nhau moi thu). MC/Liq/Price/Holders/volume/buys-sells/Top10 da co roi,
+          khong lap lai - xem error-log.md muc 26. */}
+      <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+        <span className="text-ink-muted">
+          Trading opened <span className="font-mono text-ink">{age(data.createdAt)} ago</span>
+        </span>
         {sec && (
-          <Stat
-            label="Buy / sell tax"
-            value={`${sec.buyTaxPercent.toFixed(0)}% / ${sec.sellTaxPercent.toFixed(0)}%`}
-          />
+          <>
+            <span className="text-ink-muted">
+              Buy / sell tax{" "}
+              <span className="font-mono text-ink">
+                {sec.buyTaxPercent.toFixed(0)}% / {sec.sellTaxPercent.toFixed(0)}%
+              </span>
+            </span>
+            <span className="text-ink-muted">
+              Honeypot <span className="font-mono text-ink">{sec.isHoneypot ? "Yes" : "No"}</span>
+            </span>
+            <span className="text-ink-muted">
+              Open source <span className="font-mono text-ink">{sec.isOpenSource ? "Yes" : "No"}</span>
+            </span>
+            <span className="text-ink-muted">
+              Blacklist <span className="font-mono text-ink">{sec.isBlacklist ? "Yes" : "No"}</span>
+            </span>
+            <span className="text-ink-muted">
+              Renounced <span className="font-mono text-ink">{sec.isRenounced ? "Yes" : "No"}</span>
+            </span>
+          </>
         )}
       </div>
 
-      {sec && (
-        <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-border-soft pt-4 text-sm">
-          <span className="text-ink-muted">
-            Top 10 <span className="font-mono text-ink">{sec.top10Percent.toFixed(2)}%</span>
-          </span>
-          <span className="text-ink-muted">
-            Honeypot <span className="font-mono text-ink">{sec.isHoneypot ? "Yes" : "No"}</span>
-          </span>
-          <span className="text-ink-muted">
-            Open source <span className="font-mono text-ink">{sec.isOpenSource ? "Yes" : "No"}</span>
-          </span>
-          <span className="text-ink-muted">
-            Blacklist <span className="font-mono text-ink">{sec.isBlacklist ? "Yes" : "No"}</span>
-          </span>
-          <span className="text-ink-muted">
-            Renounced <span className="font-mono text-ink">{sec.isRenounced ? "Yes" : "No"}</span>
-          </span>
-        </div>
-      )}
-
       <p className="mt-5 text-xs text-ink-muted">
-        Market context only. It is not evidence in the case and does not affect the risk score,
-        which is ruled on-chain from the record above.
+        Market context only, from GMGN, shown where it adds to the on-chain record above rather
+        than repeating it. It is not evidence in the case and does not affect the risk score.
       </p>
     </div>
   );

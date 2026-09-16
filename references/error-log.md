@@ -477,3 +477,24 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   (cao = an toan, dung truc giac). Sua o `VerdictCard` va `PreliminaryCard`.
 - **Kiem chung that:** BLAST co risk_score=0 tren chain, UI hien dung
   "100 / 100 safety score".
+
+### 34. "Failed to fetch" khi test nhieu token lien tiep: han muc gen_call 30/phut
+- **Trieu chung:** giua chung phien test, gap loi "An unknown RPC error
+  occurred. Details: Failed to fetch" khi bam quet token.
+- **Kiem tra loai tru truoc:** goi thang studio.genlayer.com/api bang curl -
+  song binh thuong (HTTP 200, 1.3s), khong phai server sap.
+- **Tim ra that:** header phan hoi co `X-RateLimit-*`. `eth_blockNumber` (JSON-
+  RPC EVM chuan) nam trong bucket "read" 300/phut, nhung `gen_call` - phuong
+  thuc DUY NHAT ma genlayer-js dung cho MOI lan doc/mo phong contract
+  (`get_verdict`, `get_facts`, `get_observations`, `preview_token`,
+  `preview_facts`) - nam trong bucket "standard" chi **30 request/phut**,
+  da tieu het 5 chi trong vai giay test bang curl.
+- **Vi sao lo dien dung luc nay:** 1 lan mo the da het 3 request (get_verdict +
+  get_facts + get_observations), cong voi polling 15s/lan (muc 30) = 4
+  request/phut moi tab dang mo. Test nhieu token lien tiep trong 1 phut (dung
+  kieu test cua phien nay) cong don du de cham tran 30.
+- **Cach sua:** giam polling tu 15s len 30s (2 request/phut thay vi 4), chua
+  het toan bo rui ro nhung giam mot nua phan RugRadar tu gay ra.
+- **Con lai, chua sua:** neu chinh gioi han 30/phut la GLOBAL cho ca mang
+  Studio (khong phai rieng theo IP/session) thi van co the cham tran luc
+  dong nguoi dung. Chua kiem chung duoc dieu nay tu 1 may don le.

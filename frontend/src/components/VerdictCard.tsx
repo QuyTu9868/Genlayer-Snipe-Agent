@@ -6,7 +6,12 @@ import { VerdictBadge } from "./VerdictBadge";
 // FACTS_POLL_MS: meme coin doi gia tung giay, nen sau khi hien so ban dau thi tu
 // dong doc lai Facts (khong dong thuan, 1 node) dinh ky trong luc trang con mo,
 // khong bat nguoi xem phai bam "Check the record" lai moi thay so moi.
-const FACTS_POLL_MS = 15000;
+// 30s (khong phai 15s): studio.genlayer.com gioi han gen_call (phuong thuc
+// dung cho MOI lan doc contract, ke ca get_verdict/get_facts) chi 30 request/
+// phut trong bucket "standard" - da do that (curl + X-RateLimit-* header).
+// 15s x 4 lan/phut cong voi cac lan doc luc mo trang de cham tran, gay
+// "Failed to fetch" khi test nhieu token lien tiep trong 1 phut.
+const FACTS_POLL_MS = 30000;
 
 function formatUsd(value: string): string {
   const num = Number(value);

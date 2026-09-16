@@ -1,6 +1,6 @@
 import { createAccount, createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import type { TransactionStatus } from "genlayer-js/types";
+import { transactionsStatusNameToNumber, type TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar tren GenLayer Studionet. Chuyen tu Asimov sang
 // vi ca Asimov lan Bradbury nghen tang xu ly giao dich (error-log muc 20, 22).
@@ -242,25 +242,44 @@ export async function previewFacts(tokenAddress: string): Promise<Facts | null> 
 }
 
 // runWrite: goi 1 method ghi (scan_token/observe_token/compute_verdict) bang vi demo cua app, cho consensus xac nhan
+//
+// BAY DA GAP THAT (xem error-log muc 37): waitForTransactionReceipt({status:"ACCEPTED"})
+// cua genlayer-js coi "da xong" ca khi validator KHONG dong thuan duoc (UNDETERMINED,
+// tuc NO_MAJORITY) - vi ham do chi kiem tra "da co ket qua cuoi cung" (isDecidedState),
+// khong kiem tra "ket qua co phai la dong y hay khong". Tx UNDETERMINED thi state KHONG
+// duoc ghi, nhung code cu coi nhu thanh cong roi di doc lai ra du lieu rong/cu. Phai tu
+// kiem tra receipt.status THAT SU la ACCEPTED, khong thi coi la that bai va gui lai.
+const MAX_WRITE_ATTEMPTS = 3;
+
 async function runWrite(functionName: string, tokenAddress: string): Promise<void> {
   const client = getClient(true);
-  const txHash = await client.writeContract({
-    address: CONTRACT_ADDRESS,
-    functionName,
-    args: [tokenAddress],
-    value: BigInt(0),
-  });
-  // retries 90 x interval 5s = 450s (7.5 phut) cho moi buoc. Truoc la 40x5s=200s,
-  // khong du: da gap that tx ACCEPTED that nhung client bo cuoi truoc do (xem
-  // error-log muc 35). Vong cho nay dung eth_getTransactionByHash, nam trong
-  // han muc rieng 300 request/phut - KHAC voi han muc gen_call 30/phut (muc 34),
-  // nen tang so lan cho khong lam nang them rui ro rate limit da tim thay.
-  await client.waitForTransactionReceipt({
-    hash: txHash,
-    status: "ACCEPTED" as TransactionStatus,
-    retries: 90,
-    interval: 5000,
-  });
+  let lastStatus = "";
+  for (let attempt = 1; attempt <= MAX_WRITE_ATTEMPTS; attempt++) {
+    const txHash = await client.writeContract({
+      address: CONTRACT_ADDRESS,
+      functionName,
+      args: [tokenAddress],
+      value: BigInt(0),
+    });
+    // retries 90 x interval 5s = 450s (7.5 phut) cho moi buoc. Vong cho nay dung
+    // eth_getTransactionByHash, nam trong han muc rieng 300 request/phut - KHAC voi
+    // han muc gen_call 30/phut (muc 34), nen khong lam nang them rui ro rate limit.
+    const receipt = await client.waitForTransactionReceipt({
+      hash: txHash,
+      status: "ACCEPTED" as TransactionStatus,
+      retries: 90,
+      interval: 5000,
+    });
+    if (String(receipt.status) === transactionsStatusNameToNumber.ACCEPTED) {
+      return; // dong thuan that su, xong
+    }
+    lastStatus = String(receipt.status); // vd "6" = UNDETERMINED, validator khong dong y
+  }
+  throw new Error(
+    `Validators could not agree after ${MAX_WRITE_ATTEMPTS} attempts (last status: ${lastStatus}). ` +
+      "This usually happens on a token whose data is changing too fast for every validator " +
+      "to read the exact same bytes - try again in a moment.",
+  );
 }
 
 export type ScanStep = "scan_token" | "observe_token" | "compute_verdict";

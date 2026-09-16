@@ -534,3 +534,36 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   hien tu giay thu 13.8 voi day du bang chung; ban an chinh thuc thay the tai
   cho o giay 111.8 (cung 53/100, badge het chu PRELIMINARY, vien tro lai net
   lien) - khong co khoang trong nao giua 2 giai doan.
+
+### 37. Bug that quan trong: UNDETERMINED bi coi la ACCEPTED, ghi lang le that bai
+- **Boi canh phat hien:** quet token LITVM (moi mo giao dich duoc 51 phut, volume
+  24h ~$3M, gia nhay lien tuc) 2 lan lien tiep deu ra UNRESOLVED du GeckoTerminal
+  co san 20 pool that. Dao mot contract do (`ProbeLit2.py`) qua validator thi
+  phat hien: `waitForTransactionReceipt({status: "ACCEPTED"})` tra ve THANH CONG
+  (khong nem loi) trong khi `self.report` VAN con nguyen gia tri khoi tao "INIT" -
+  tuc la ham ghi state CHUA HE CHAY, nhung client coi nhu da xong.
+- **Nguyen nhan goc:** doc source `genlayer-js`, ham `waitForTransactionReceipt`
+  coi tx la "xong" khi `status === "ACCEPTED" || isDecidedState(status)`, va
+  `isDecidedState` tra True cho CA `UNDETERMINED` (validator khong dong thuan
+  duoc / NO_MAJORITY), khong chi rieng `ACCEPTED`. Tx cua contract dao ra
+  `status: 6` = UNDETERMINED (theo bang `transactionsStatusNumberToName` cua
+  chinh genlayer-js: 5=ACCEPTED, 6=UNDETERMINED, 7=FINALIZED...). Code cu cua
+  minh (`runWrite` trong `genlayer.ts`) khong tu kiem tra lai gia tri status
+  THAT SU tra ve, nen coi UNDETERMINED = thanh cong, roi doc lai ra Facts/
+  Verdict rong hoac cu.
+- **Vi sao de xay ra voi token nhu LITVM:** `_fetch_holders`/`_fetch_pool` dung
+  `gl.eq_principle.strict_eq` - doi hoi MOI validator fetch ra dung BYTE giong
+  het nhau. Token cang moi, giao dich cang nhieu (LITVM: 51 phut tuoi, $3M
+  volume 24h) thi du lieu doi cang nhanh giua luc validator nay va validator
+  kia fetch, cang de NO_MAJORITY that su - day co the la ly do that dang sau
+  nhieu lan "Blockscout/GeckoTerminal timeout" da ghi nhan tu CP4 (muc 4) ma
+  chua bao gio xac dinh duoc goc re that.
+- **Cach sua:** sau `waitForTransactionReceipt`, tu so sanh `receipt.status`
+  voi `transactionsStatusNameToNumber.ACCEPTED` ("5"). Neu khac (UNDETERMINED
+  hoac cac trang thai da-quyet-dinh-nhung-khong-dong-y khac), coi la THAT BAI,
+  gui lai giao dich moi (toi da 3 lan), het lan thi nem loi ro rang thay vi
+  im lang tra ve nhu thanh cong.
+- **Kiem chung that:** quet lai LITVM qua UI that sau khi sua, mat 207 giay
+  (dai hon binh thuong ro rang co retry ben trong) roi ra UNRESOLVED - lan nay
+  la ket qua DA XAC NHAN THAT qua dong thuan that, khong con bi che giau boi
+  loi cu. Hop ly voi ban chat cuc ky bien dong cua token nay.

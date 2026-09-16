@@ -117,7 +117,10 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <ThemeToggle />
-      <div className="mx-auto max-w-6xl px-6 py-16 sm:py-24">
+      {/* chiem ~75% chieu ngang man hinh thay vi 1 con so co dinh, vi man hinh
+          nguoi dung rong hay hep khac nhau nhieu. San 20rem/tran 100rem de
+          khong vo tren dien thoai lan man sieu rong. */}
+      <div className="mx-auto max-w-[clamp(20rem,75vw,100rem)] px-6 py-16 sm:py-24">
         <header className="mb-16">
           <p className="font-mono text-xs uppercase tracking-widest text-ink-muted">RugRadar</p>
           <h1 className="mt-3 font-serif text-4xl tracking-tight text-ink sm:text-5xl">

@@ -56,3 +56,17 @@ body {
   font-family: var(--font-sans);
   line-height: 1.6;
 }
+
+/* Chu tren PC nho qua: tang co so (font-size cua <html>) tu man lg tro len.
+   Moi text-* cua Tailwind deu tinh bang rem nen se to len theo dung ty le,
+   khong phai sua tung dong o tung component. Dien thoai/tablet nho giu 16px goc. */
+@media (min-width: 1024px) {
+  html {
+    font-size: 18px;
+  }
+}
+@media (min-width: 1536px) {
+  html {
+    font-size: 19px;
+  }
+}

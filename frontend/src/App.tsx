@@ -13,13 +13,11 @@ import {
   type Verdict,
 } from "./lib/genlayer";
 import { VerdictCard } from "./components/VerdictCard";
-import { PreliminaryCard } from "./components/PreliminaryCard";
 import { ThemeToggle } from "./components/ThemeToggle";
 
 type ViewState =
   | { kind: "idle" }
   | { kind: "checking"; tokenAddress: string }
-  | { kind: "not_found"; tokenAddress: string }
   | { kind: "verdict"; tokenAddress: string; verdict: Verdict; facts: Facts | null; observations: Observations | null }
   | { kind: "scanning"; tokenAddress: string; step: ScanStep; preview: Verdict | null }
   | { kind: "error"; message: string };
@@ -154,56 +152,26 @@ export default function App() {
             <p className="text-sm text-ink-muted">Checking the record...</p>
           )}
 
-          {view.kind === "not_found" && (
-            <div className="rounded-xl border border-border-soft bg-surface p-8">
-              <p className="text-sm text-ink">No case on file yet for this token.</p>
-              <p className="mt-2 text-sm text-ink-muted">
-                Opening a case submits three transactions to the GenLayer Studionet
-                (evidence gathering, AI testimony, verdict). No wallet needed to view a case.
-              </p>
-              <button
-                onClick={() => handleScan(view.tokenAddress)}
-                className="mt-5 rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-on-accent transition hover:opacity-90 active:scale-[0.98]"
-              >
-                Open a case
-              </button>
-            </div>
-          )}
-
           {view.kind === "scanning" && (
-            <div className="rounded-xl border border-border-soft bg-surface p-8">
-              <p className="text-sm text-ink">{STEP_LABELS[view.step]}</p>
-              <p className="mt-2 text-xs text-ink-muted">
-                Waiting for validator consensus on the testnet. This can take a minute or two per
-                step.
-              </p>
-              <ol className="mt-5 space-y-2">
-                {(Object.keys(STEP_LABELS) as ScanStep[]).map((step) => {
-                  const order: ScanStep[] = ["scan_token", "observe_token", "compute_verdict"];
-                  const current = order.indexOf(view.step);
-                  const thisIndex = order.indexOf(step);
-                  const done = thisIndex < current;
-                  const active = thisIndex === current;
-                  return (
-                    <li key={step} className="flex items-center gap-3 text-xs">
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${done ? "bg-safe-text" : active ? "bg-ink" : "bg-border-soft"}`}
-                      />
-                      <span className={active ? "text-ink" : "text-ink-muted"}>{STEP_LABELS[step]}</span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          )}
-
-          {view.kind === "scanning" && (
-            <div className="mt-4 space-y-4">
+            <div className="space-y-4">
+              {/* Hien luon toan bo thong tin so tham (diem + Facts) ngay khi co, thay vi
+                  man hinh cho trong. VerdictCard tu doc Facts song ben trong (khong can
+                  truyen tu day), viet="preliminary" de danh dau chua phai ban an chinh
+                  thuc - khi ban an that ve thi thay the tai cho, khong con man hinh cho. */}
               {view.preview ? (
-                <PreliminaryCard preview={view.preview} />
+                <VerdictCard
+                  tokenAddress={view.tokenAddress}
+                  verdict={view.preview}
+                  facts={null}
+                  observations={null}
+                  preliminary
+                />
               ) : (
-                <p className="text-xs text-ink-muted">Preliminary hearing on one node...</p>
+                <p className="text-sm text-ink-muted">Reading initial evidence...</p>
               )}
+              <p className="text-xs text-ink-muted">
+                {STEP_LABELS[view.step]} - validators are confirming, this updates automatically
+              </p>
             </div>
           )}
 

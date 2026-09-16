@@ -67,11 +67,15 @@ export function VerdictCard({
   verdict,
   facts,
   observations,
+  preliminary = false,
 }: {
   tokenAddress: string;
   verdict: Verdict;
   facts: Facts | null; // so ban dau (da luu tren chain), hien ngay trong luc cho lan doc song dau tien
   observations: Observations | null;
+  // preliminary: dang hien so tham (1 node, chua dong thuan), khong phai ban an
+  // chinh thuc - doi vien the, an dong "Ruled on", the hien ro trang thai chua chot
+  preliminary?: boolean;
 }) {
   const [market, setMarket] = useState<MarketData | null>(null);
   const [liveFacts, setLiveFacts] = useState<Facts | null>(null);
@@ -134,7 +138,9 @@ export function VerdictCard({
   const sec = market?.security;
 
   return (
-    <div className="rounded-xl border border-border-soft bg-surface p-8 sm:p-10">
+    <div
+      className={`rounded-xl border bg-surface p-8 sm:p-10 ${preliminary ? "border-dashed border-border-soft" : "border-border-soft"}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-soft pb-6">
         <div className="flex items-start gap-4">
           {/* Logo hinh vuong, bo tron nhe, chu khong tron het. gmgn.ai gan
@@ -156,7 +162,12 @@ export function VerdictCard({
             <p className="mt-1 break-all font-mono text-sm text-ink-muted">{tokenAddress}</p>
           </div>
         </div>
-        <VerdictBadge verdict={verdict.verdict} />
+        <div className="flex flex-col items-end gap-1.5">
+          <VerdictBadge verdict={verdict.verdict} />
+          {preliminary && (
+            <span className="text-xs uppercase tracking-widest text-ink-muted">Preliminary</span>
+          )}
+        </div>
       </div>
 
       {verdict.resolved ? (
@@ -248,9 +259,16 @@ export function VerdictCard({
             </div>
           )}
 
-          <p className="mt-8 text-xs text-ink-muted">
-            Ruled on {new Date(verdict.observed_at).toLocaleString("en-US")}
-          </p>
+          {preliminary ? (
+            <p className="mt-8 text-xs text-ink-muted">
+              Preliminary - one node, not yet ruled by consensus. Source code testimony is
+              included once validators agree; this card updates automatically, no need to reload.
+            </p>
+          ) : (
+            <p className="mt-8 text-xs text-ink-muted">
+              Ruled on {new Date(verdict.observed_at).toLocaleString("en-US")}
+            </p>
+          )}
         </>
       ) : (
         <div className="py-8">

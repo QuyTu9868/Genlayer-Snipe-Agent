@@ -513,3 +513,24 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   cham vao gioi han da phat hien.
 - **Cach sua:** tang `retries` tu 40 len 90 (450s/7.5 phut moi buoc), giu
   nguyen interval 5s.
+
+### 36. UI hien toan bo ngay lap tuc thay vi man hinh cho (user duyet 16/9)
+- **Phan hoi:** man hinh "dang quet..." qua don gian trong luc cho (1-2 phut),
+  muon hien HET thong tin doc duoc ngay, roi cap nhat tai cho khi validator
+  xong, khong bat nguoi xem nhin man hinh trong.
+- **Cach lam:** xoa han khoi "scanning" ca (progress card + list buoc +
+  PreliminaryCard nho rieng), thay bang chinh `VerdictCard` voi prop moi
+  `preliminary` ngay khi co diem so tham (`previewVerdict`, ~5-15s). Facts
+  (holder, MC, thanh khoan...) do CHINH VerdictCard tu doc qua co che polling
+  co san (`previewFacts`, muc 30) - khong can App.tsx tu fetch rieng, tranh
+  goi trung 2 lan cung 1 du lieu (do dung chung han muc gen_call 30/phut,
+  muc 34).
+- **Preliminary danh dau o 2 cho:** vien the chuyen sang net dut, va chu
+  "PRELIMINARY" nho canh badge SAFE/SUSPICIOUS/SCAM - de khong ai nham day
+  la ban an chinh thuc chi vi nhin thay du thong tin.
+- **Component `PreliminaryCard.tsx` xoa han** (khong con dung, VerdictCard
+  gom chung ca 2 vai tro qua prop `preliminary`).
+- **Kiem chung that (token COG, chua tung quet):** so tham SUSPICIOUS 53/100
+  hien tu giay thu 13.8 voi day du bang chung; ban an chinh thuc thay the tai
+  cho o giay 111.8 (cung 53/100, badge het chu PRELIMINARY, vien tro lai net
+  lien) - khong co khoang trong nao giua 2 giai doan.

@@ -464,3 +464,16 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
   (>25). Xac nhan `error-log.md` muc 31 sua dung goc re, khong chi la mot ca
   don le cua SHIB-clone.
 - Contract cuoi cung dung cho CP7: `0xFF67ec10779B693deeb98D8D7D2F02b705841b50`.
+
+### 33. "0/100" doc nham thanh diem xau: doi sang Safety score
+- **Phan hoi (lap lai it nhat 2 lan qua nhieu token khac nhau):** thay diem 0
+  cho token SAFE, nguoi dung doc nham la "0 diem" kieu thang diem so (cao =
+  tot), trong khi day la `risk_score` (cao = nguy hiem, thap = an toan).
+- **Khong phai loi tinh toan** - da kiem chung nhieu lan diem tinh dung theo
+  scoring-spec.md. Day la van de doc hieu UI: nhieu nguoi thay so 0-100 mac
+  dinh nghi cao la tot.
+- **Cach sua:** contract VAN luu va tinh `risk_score` nhu cu (khong doi logic
+  cham diem). Rieng FRONTEND hien `100 - risk_score` voi nhan "safety score"
+  (cao = an toan, dung truc giac). Sua o `VerdictCard` va `PreliminaryCard`.
+- **Kiem chung that:** BLAST co risk_score=0 tren chain, UI hien dung
+  "100 / 100 safety score".

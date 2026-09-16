@@ -17,9 +17,12 @@ export function PreliminaryCard({ preview }: { preview: Verdict }) {
 
       {preview.resolved ? (
         <>
+          {/* risk_score luu tren chain: 0 = rui ro thap nhat. Hien nguoc lai
+              (100 - risk_score) lam "safety score" de cao = an toan, dung truc
+              giac so dong - nhieu nguoi doc nham "0" la diem xau. */}
           <p className="mt-3 flex items-baseline gap-2 text-ink-muted">
-            <span className="font-serif text-4xl">{preview.risk_score}</span>
-            <span className="text-sm">/ 100, leaning {preview.verdict}</span>
+            <span className="font-serif text-4xl">{100 - preview.risk_score}</span>
+            <span className="text-sm">/ 100 safety, leaning {preview.verdict}</span>
           </p>
           {flags.length > 0 && (
             <ul className="mt-3 space-y-1">

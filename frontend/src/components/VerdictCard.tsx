@@ -158,8 +158,11 @@ export function VerdictCard({
         <>
           <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3 py-8">
             <div className="flex items-baseline gap-3">
-              <span className="font-serif text-6xl tracking-tight text-ink">{verdict.risk_score}</span>
-              <span className="text-sm text-ink-muted">/ 100 risk score</span>
+              {/* Chain luu risk_score (0 = rui ro thap nhat). Hien nguoc lai
+                  (100 - risk_score) lam "safety score": cao = an toan, dung
+                  truc giac so dong - da co nguoi doc nham "0" la diem xau. */}
+              <span className="font-serif text-6xl tracking-tight text-ink">{100 - verdict.risk_score}</span>
+              <span className="text-sm text-ink-muted">/ 100 safety score</span>
             </div>
             {displayFacts && displayFacts.has_pool && (
               <div className="flex gap-6 text-sm">
@@ -289,7 +292,7 @@ export function VerdictCard({
             )}
           </div>
           <p className="mt-3 text-xs text-ink-muted">
-            Not evidence in the case. It does not affect the risk score, which is ruled on-chain
+            Not evidence in the case. It does not affect the safety score, which is ruled on-chain
             from the record above.
           </p>
         </div>

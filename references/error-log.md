@@ -498,3 +498,18 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
 - **Con lai, chua sua:** neu chinh gioi han 30/phut la GLOBAL cho ca mang
   Studio (khong phai rieng theo IP/session) thi van co the cham tran luc
   dong nguoi dung. Chua kiem chung duoc dieu nay tu 1 may don le.
+
+### 35. "Timed out waiting for transaction... ACCEPTED" nhung tx da ACCEPTED that
+- **Trieu chung:** loi "Timed out waiting for transaction 0x24ff... to reach
+  status ACCEPTED (current status: 3)". Doc lai chinh tx do ngay sau: da la
+  ACCEPTED that su tren chain. Khong phai tx treo - client bo cuoc cho qua som.
+- **Nguyen nhan:** `waitForTransactionReceipt` cau hinh `retries: 40, interval:
+  5000` = toi da 200 giay moi buoc. Thuc te tung do compute_verdict 1 minh mat
+  toi 114s, va tong 3 buoc co luc vuot qua 200s trong dieu kien mang cham.
+- **Kiem tra truoc khi sua (co the lam nang them rate limit muc 34 khong):**
+  vong lap nay goi `eth_getTransactionByHash` (kiem tra bang curl + doc
+  genlayer-js), nam trong bucket "read" rieng **300 request/phut** - KHAC voi
+  bucket "standard" 30/phut cua `gen_call`. Tang so lan cho an toan, khong
+  cham vao gioi han da phat hien.
+- **Cach sua:** tang `retries` tu 40 len 90 (450s/7.5 phut moi buoc), giu
+  nguyen interval 5s.

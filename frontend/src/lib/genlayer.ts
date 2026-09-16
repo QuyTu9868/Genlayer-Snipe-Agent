@@ -250,10 +250,15 @@ async function runWrite(functionName: string, tokenAddress: string): Promise<voi
     args: [tokenAddress],
     value: BigInt(0),
   });
+  // retries 90 x interval 5s = 450s (7.5 phut) cho moi buoc. Truoc la 40x5s=200s,
+  // khong du: da gap that tx ACCEPTED that nhung client bo cuoi truoc do (xem
+  // error-log muc 35). Vong cho nay dung eth_getTransactionByHash, nam trong
+  // han muc rieng 300 request/phut - KHAC voi han muc gen_call 30/phut (muc 34),
+  // nen tang so lan cho khong lam nang them rui ro rate limit da tim thay.
   await client.waitForTransactionReceipt({
     hash: txHash,
     status: "ACCEPTED" as TransactionStatus,
-    retries: 40,
+    retries: 90,
     interval: 5000,
   });
 }

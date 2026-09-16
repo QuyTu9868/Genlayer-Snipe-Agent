@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Facts, Observations, Verdict } from "../lib/genlayer";
+import { previewFacts, type Facts, type Observations, type Verdict } from "../lib/genlayer";
 import { getMarketData, isGmgnConfigured, type MarketData } from "../lib/gmgn";
 import { VerdictBadge } from "./VerdictBadge";
+
+// FACTS_POLL_MS: meme coin doi gia tung giay, nen sau khi hien so ban dau thi tu
+// dong doc lai Facts (khong dong thuan, 1 node) dinh ky trong luc trang con mo,
+// khong bat nguoi xem phai bam "Check the record" lai moi thay so moi.
+const FACTS_POLL_MS = 15000;
 
 function formatUsd(value: string): string {
   const num = Number(value);
@@ -56,16 +61,16 @@ export function VerdictCard({
   tokenAddress,
   verdict,
   facts,
-  factsAsOf,
   observations,
 }: {
   tokenAddress: string;
   verdict: Verdict;
-  facts: Facts | null;
-  factsAsOf: Date | null; // null = so da luu tren chain tu lan quet truoc, khong phai so vua doc
+  facts: Facts | null; // so ban dau (da luu tren chain), hien ngay trong luc cho lan doc song dau tien
   observations: Observations | null;
 }) {
   const [market, setMarket] = useState<MarketData | null>(null);
+  const [liveFacts, setLiveFacts] = useState<Facts | null>(null);
+  const [liveFactsAsOf, setLiveFactsAsOf] = useState<Date | null>(null);
 
   // Boi canh thi truong tu GMGN, gop CHUNG 1 the voi ban an thay vi tach rieng,
   // nhung van la 1 nguon khac, KHONG anh huong risk_score. Hong thi lang le
@@ -83,13 +88,40 @@ export function VerdictCard({
     };
   }, [tokenAddress]);
 
+  // Facts (MC, gia, thanh khoan, holder...) tu dong doc lai dinh ky qua preview_facts
+  // (1 node, khong dong thuan). risk_score/verdict/flags VAN la ban an da dong thuan,
+  // khong the "song" theo giay - chi rieng cac con so nay duoc lam tuoi lien tuc.
+  useEffect(() => {
+    let cancelled = false;
+    setLiveFacts(null);
+    setLiveFactsAsOf(null);
+
+    async function refresh() {
+      if (document.hidden) return; // tab dang an thi khong goi, do tai nguyen
+      const fresh = await previewFacts(tokenAddress);
+      if (!cancelled && fresh) {
+        setLiveFacts(fresh);
+        setLiveFactsAsOf(new Date());
+      }
+    }
+
+    refresh();
+    const id = setInterval(refresh, FACTS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [tokenAddress]);
+
+  const displayFacts = liveFacts ?? facts;
+
   const flagList = verdict.flags
     .split(";")
     .map((f) => f.trim())
     .filter(Boolean);
 
-  const tokenLabel = facts?.token_name
-    ? `${facts.token_name}${facts.token_symbol ? ` (${facts.token_symbol})` : ""}`
+  const tokenLabel = displayFacts?.token_name
+    ? `${displayFacts.token_name}${displayFacts.token_symbol ? ` (${displayFacts.token_symbol})` : ""}`
     : market?.name
       ? `${market.name}${market.symbol ? ` (${market.symbol})` : ""}`
       : "";
@@ -129,16 +161,16 @@ export function VerdictCard({
               <span className="font-serif text-6xl tracking-tight text-ink">{verdict.risk_score}</span>
               <span className="text-sm text-ink-muted">/ 100 risk score</span>
             </div>
-            {facts && facts.has_pool && (
+            {displayFacts && displayFacts.has_pool && (
               <div className="flex gap-6 text-sm">
                 <span className="text-ink-muted">
-                  MC <span className="font-mono text-ink">${formatCompactUsd(facts.market_cap_usd)}</span>
+                  MC <span className="font-mono text-ink">${formatCompactUsd(displayFacts.market_cap_usd)}</span>
                 </span>
                 <span className="text-ink-muted">
-                  Liq <span className="font-mono text-ink">${formatCompactUsd(facts.reserve_in_usd)}</span>
+                  Liq <span className="font-mono text-ink">${formatCompactUsd(displayFacts.reserve_in_usd)}</span>
                 </span>
                 <span className="text-ink-muted">
-                  Pool <span className="font-mono text-ink">{formatAge(facts.pool_age_hours)}</span>
+                  Pool <span className="font-mono text-ink">{formatAge(displayFacts.pool_age_hours)}</span>
                 </span>
               </div>
             )}
@@ -160,35 +192,35 @@ export function VerdictCard({
             </ul>
           </div>
 
-          {facts && (
+          {displayFacts && (
             <div className="mt-8">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="text-xs uppercase tracking-widest text-ink-muted">On-chain record</p>
-                {/* factsAsOf null = day la so da luu tu lan quet truoc, khong phai so vua doc lai */}
+                {/* liveFactsAsOf null = van dang cho lan doc song dau tien, dang hien so da luu tam */}
                 <p className="text-xs text-ink-muted">
-                  {factsAsOf
-                    ? `Live reading as of ${factsAsOf.toLocaleTimeString("en-US")}`
-                    : "From the last completed scan"}
+                  {liveFactsAsOf
+                    ? `Live, updates automatically - last read ${liveFactsAsOf.toLocaleTimeString("en-US")}`
+                    : "Reading live data..."}
                 </p>
               </div>
               <div className="mt-3 sm:grid sm:grid-cols-2 sm:gap-x-8">
                 {/* Blockscout khong doc duoc luc scan: hien "Unavailable" thay vi so 0 gay hieu nham */}
-                <Fact label="Source verified" value={facts.holder_evidence ? (facts.is_verified ? "Yes" : "No") : "Unavailable"} />
-                <Fact label="Holders" value={facts.holder_evidence ? facts.holders_count.toLocaleString("en-US") : "Unavailable"} />
-                <Fact label="Top individual holder" value={facts.holder_evidence ? `${facts.top_holder_percent}%` : "Unavailable"} />
-                <Fact label="Top 10 individual holders" value={facts.holder_evidence ? `${facts.top10_percent}%` : "Unavailable"} />
-                <Fact label="Independent large holders" value={facts.holder_evidence ? String(facts.whale_holder_count) : "Unavailable"} />
+                <Fact label="Source verified" value={displayFacts.holder_evidence ? (displayFacts.is_verified ? "Yes" : "No") : "Unavailable"} />
+                <Fact label="Holders" value={displayFacts.holder_evidence ? displayFacts.holders_count.toLocaleString("en-US") : "Unavailable"} />
+                <Fact label="Top individual holder" value={displayFacts.holder_evidence ? `${displayFacts.top_holder_percent}%` : "Unavailable"} />
+                <Fact label="Top 10 individual holders" value={displayFacts.holder_evidence ? `${displayFacts.top10_percent}%` : "Unavailable"} />
+                <Fact label="Independent large holders" value={displayFacts.holder_evidence ? String(displayFacts.whale_holder_count) : "Unavailable"} />
                 <Fact
                   label="Liquidity pool"
-                  value={facts.has_pool ? `$${formatUsd(facts.reserve_in_usd)}` : "None found"}
+                  value={displayFacts.has_pool ? `$${formatUsd(displayFacts.reserve_in_usd)}` : "None found"}
                 />
-                {facts.has_pool && (
+                {displayFacts.has_pool && (
                   <>
-                    <Fact label="Price" value={formatPrice(facts.price_usd)} />
-                    <Fact label="Market cap" value={`$${formatUsd(facts.market_cap_usd)}`} />
-                    <Fact label="24h volume" value={`$${formatUsd(facts.volume_24h_usd)}`} />
-                    <Fact label="24h buys / sells" value={`${facts.buys_24h} / ${facts.sells_24h}`} />
-                    <Fact label="Pool created" value={`${formatAge(facts.pool_age_hours)} ago`} />
+                    <Fact label="Price" value={formatPrice(displayFacts.price_usd)} />
+                    <Fact label="Market cap" value={`$${formatUsd(displayFacts.market_cap_usd)}`} />
+                    <Fact label="24h volume" value={`$${formatUsd(displayFacts.volume_24h_usd)}`} />
+                    <Fact label="24h buys / sells" value={`${displayFacts.buys_24h} / ${displayFacts.sells_24h}`} />
+                    <Fact label="Pool created" value={`${formatAge(displayFacts.pool_age_hours)} ago`} />
                   </>
                 )}
               </div>

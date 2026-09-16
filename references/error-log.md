@@ -420,3 +420,47 @@ Ghi lại để không tốn công debug lại lần 2. Mỗi mục: triệu ch�
 - **Ket luan:** giu nguyen cong thuc cham diem hien tai, khong sua vi 2 ly do
   tren da du chung minh no hoat dong dung. Lo hong LP-lock/dev-holdings van
   con that su nhung khong doi ket qua cua cac token da test hom nay.
+
+### 30. "Real-time" nghia la tu dong cap nhat, khong phai "moi lan bam moi"
+- **Phan hoi:** ban sua o muc 28 (lam moi Facts khi bam "Check the record") van
+  chua du. Nguoi dung muon so TU DONG doi trong luc trang dang mo, khong can
+  bam lai gi ca.
+- **Cach sua:** chuyen logic doc Facts song vao HAN TRONG `VerdictCard`, tu
+  goi `preview_facts` ngay khi mo the va lap lai moi 15 giay (`setInterval`)
+  suot luc trang con mo, tam dung khi tab bi an (`document.hidden`) de do tai.
+  App.tsx chi con truyen Facts BAN DAU (tu chain) de hien ngay lap tuc trong
+  luc cho lan doc song dau tien. Nhan doi thanh "Live, updates automatically -
+  last read HH:MM:SS".
+- **Kiem chung that:** mo the SHIB-clone, KHONG bam gi trong 33 giay, nhan
+  thoi gian tu dong xuat hien va tu dong doi - dung 15s dinh ky, khong can
+  tuong tac.
+
+### 31. Phat hien qua chinh viec test muc 30: holder_evidence khong bao het loi that
+- **Trieu chung phat hien khi theo doi polling lien tuc:** Top individual
+  holder va Top 10 dot ngot ve 0% giua 2 lan doc, trong khi Holders van dung
+  va Source verified van Yes - khong phai gia giam, ma la du lieu sai.
+- **Nguyen nhan goc:** `holder_evidence` (co bao gio hien "Unavailable" hay
+  khong) chi theo doi `_fetch_address_info` (`blockscout_ok`), KHONG theo doi
+  rieng `_fetch_holders` (endpoint /tokens/{addr}/holders). Khi endpoint
+  holders loi tam thoi (vd Blockscout chan) ma endpoint address van song, ca 3
+  truong top_holder_percent/top10_percent/whale_holder_count lang le ve 0,
+  con holder_evidence van bao True - hien "0%" nhu the da kiem tra that, thay
+  vi "Unavailable". Loi nay ton tai tu truoc (ca trong scan_token/ban an chinh
+  thuc), chi la it lo dien vi 1 lan doc consensus (5 validator) it kha nang
+  cung lo hon 1 lan doc single-node lap lai lien tuc qua polling.
+- **Da grep ca file:** chi dung 1 cho co kieu loi nay (`.get("ok")` dung sai);
+  `observe_token` da xu ly dung tu dau (Observations(observed=False) khi loi).
+- **Cach sua:** `holder_evidence = blockscout_ok and holders_info.get("ok")`.
+  Ap dung cho ca `scan_token` (ban an chinh thuc) lan `preview_facts`/
+  `preview_token` (dung chung `_gather_facts`). Contract moi:
+  `0x51A01B0C61D05Fb53d2101b5d5c32fD85bF38422`.
+
+### 32. Xac nhan sau khi sua: diem da phan biet duoc thay vi tap trung ve 0
+- **Ket qua quet lai 5 token demo tren contract da sua mau so (muc 31 phan sau):**
+  HOP risk=0 top10=38%, SWARM risk=0 top10=23%, SHIB-clone risk=10 top10=57%,
+  GS risk=20 top10=94%, Wealth risk=0 top10=15%.
+- So voi truoc khi sua (hau het top10 duoi 20%, nhieu token 0%), gio da co dai
+  gia tri that su phan biet (15% -> 94%), va GS da gan sat nguong SUSPICIOUS
+  (>25). Xac nhan `error-log.md` muc 31 sua dung goc re, khong chi la mot ca
+  don le cua SHIB-clone.
+- Contract cuoi cung dung cho CP7: `0xFF67ec10779B693deeb98D8D7D2F02b705841b50`.

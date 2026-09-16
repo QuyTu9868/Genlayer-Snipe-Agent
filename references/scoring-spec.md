@@ -6,7 +6,7 @@ Nguyên tắc: AI trả các quan sát đóng (true/false/số). CODE contract c
 
 Từ tầng dữ liệu (facts, đọc thẳng từ API, không cần AI):
 - `holders_count` (số)
-- `top_holder_percent` (số, % supply ví lớn nhất giữ)
+- `top_holder_percent` (số, % LƯU HÀNH ví lớn nhất giữ - xem mục "Mẫu số % holder" bên dưới)
 - `is_verified` (bool)
 - `reserve_in_usd` (số, thanh khoản)
 - `volume_24h_usd` (số)
@@ -55,6 +55,14 @@ Chặn biên: `risk = max(0, min(100, risk))`.
 - Bỏ contract thật: pool AMM (`UniswapV3Pool`, `PoolManager` của Uniswap V4...).
 - GIỮ contract có `proxy_type` là `eip7702` hoặc `erc7760`: đây là ví thông minh của người thật, Blockscout gắn `is_contract=true` nhưng GMGN coi là người (`addr_type=0`).
 - Kiểm chứng với token 富贵 `0xceeb...7139`: contract ra top 10 = 14%, GMGN = 14.26%.
+
+## Mẫu số % holder: lưu hành, không phải tổng cung (thêm 16/9, user duyệt)
+
+`top_holder_percent`/`top10_percent`/ngưỡng `whale_holder_count` (>=1% lưu hành) chia cho **lưu hành = tổng cung trừ số dư nằm trong pool AMM/contract** (`circulating_raw`), KHÔNG chia cho tổng cung thô.
+
+Lý do: pool AMM luôn giữ phần lớn cung ở giai đoạn đầu (bản chất cách AMM hoạt động). Chia cho tổng cung thô làm mọi tỷ lệ bị pha loãng gần về 0 bất kể ví người thật tập trung đến đâu. Kiểm chứng thật trên SHIB-clone `0xb939...e86e6`: pool giữ 99.05% tổng cung; top 10 ví người thật chia cho tổng cung ra 0%, nhưng chia cho lưu hành ra 57% - đúng mức GMGN báo. Đây là root cause thật của việc điểm hay ra 0 trước 16/9, không phải thiếu LP-lock như từng nghĩ.
+
+Địa chỉ đốt (`0x...dead`, `0x000...0`) KHÔNG tính vào cả tử lẫn mẫu (coi như đã rời khỏi cung, không phải "chưa bán").
 
 ## Phán trên bằng chứng một phần (thêm 14/9, user duyệt)
 

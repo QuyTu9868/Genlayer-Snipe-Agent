@@ -150,19 +150,29 @@ class RugRadar(gl.Contract):
                 web_data = gl.nondet.web.render(url, mode="text")
                 data = json.loads(web_data)
                 items = data.get("items", [])
-                eoa_values = [  # vi cua NGUOI: bo pool/contract that va dia chi dot
-                    int(item["value"])
-                    for item in items
-                    if _is_person(item.get("address") or {})
-                ]
+                eoa_values = []  # vi cua NGUOI: bo pool/contract that va dia chi dot
+                pool_value = 0  # tong so du nam trong pool AMM/contract, KHONG tinh dia chi dot
+                for item in items:
+                    addr = item.get("address") or {}
+                    value = int(item["value"])
+                    if _is_person(addr):
+                        eoa_values.append(value)
+                    elif addr.get("hash", "").lower() not in BURN_ADDRESSES:
+                        pool_value += value
                 eoa_values.sort(reverse=True)
+                # % holder phai chia cho luong LUU HANH (tong cung tru phan con nam trong
+                # pool AMM chua ban ra), KHONG phai chia cho tong cung. Pool thuong giu phan
+                # lon cung luc dau, chia cho tong cung se lam moi ty le bi pha loang gan ve 0
+                # bat ke vi nguoi that tap trung the nao - da kiem chung that gay hieu sai
+                # (top10 that su 57% luu hanh nhung tinh theo tong cung ra 0%).
+                circulating_raw = total_supply_raw - pool_value
                 top_percent = 0
                 top10_percent = 0
                 whale_count = 0
-                if total_supply_raw > 0 and eoa_values:  # chia nguyen, tranh float
-                    top_percent = eoa_values[0] * 100 // total_supply_raw
-                    top10_percent = sum(eoa_values[:10]) * 100 // total_supply_raw
-                    whale_count = sum(1 for v in eoa_values if v * 100 >= total_supply_raw)
+                if circulating_raw > 0 and eoa_values:  # chia nguyen, tranh float
+                    top_percent = eoa_values[0] * 100 // circulating_raw
+                    top10_percent = sum(eoa_values[:10]) * 100 // circulating_raw
+                    whale_count = sum(1 for v in eoa_values if v * 100 >= circulating_raw)
                 return json.dumps(
                     {
                         "ok": True,
@@ -243,6 +253,12 @@ class RugRadar(gl.Contract):
 
         total_supply_raw = int(address_info.get("total_supply") or 0)
         holders_info = self._fetch_holders(token_address, total_supply_raw) if blockscout_ok else {"ok": False}
+        # holder_evidence phai doi hoi CA HAI fetch thanh cong. Truoc day chi xet
+        # blockscout_ok (fetch dia chi), nen khi rieng _fetch_holders loi (vd Blockscout
+        # chan tam thoi dung 1 endpoint) thi top_holder_percent/top10_percent/
+        # whale_holder_count lang le tra ve 0 - nhin nhu "da kiem tra, dung 0%" trong khi
+        # thuc ra chua doc duoc gi. Phat hien qua polling preview_facts lien tuc.
+        holder_evidence = blockscout_ok and bool(holders_info.get("ok", False))
 
         pool_age_hours = 0
         if has_pool and pool_info.get("pool_created_at"):
@@ -260,7 +276,7 @@ class RugRadar(gl.Contract):
 
         return Facts(
             resolved=True,
-            holder_evidence=blockscout_ok,
+            holder_evidence=holder_evidence,
             token_name=str(address_info.get("name") or ""),
             token_symbol=str(address_info.get("symbol") or ""),
             holders_count=int(address_info.get("holders_count") or 0),

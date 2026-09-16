@@ -4,7 +4,7 @@ import type { TransactionStatus } from "genlayer-js/types";
 
 // CONTRACT_ADDRESS: dia chi RugRadar tren GenLayer Studionet. Chuyen tu Asimov sang
 // vi ca Asimov lan Bradbury nghen tang xu ly giao dich (error-log muc 20, 22).
-export const CONTRACT_ADDRESS = "0x36A0a2469473cEc4f2573DA07F386092F58FE8c7" as const;
+export const CONTRACT_ADDRESS = "0xFF67ec10779B693deeb98D8D7D2F02b705841b50" as const;
 
 // DEMO NOTE (quyet dinh co chu dinh, KHONG phai pattern production):
 // App nay tu tra phi quet ho nguoi xem bang 1 vi rieng CHI dung cho demo,
